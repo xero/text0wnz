@@ -1,60 +1,19 @@
+import { expect } from '@playwright/test';
 import path from 'path';
+import { loadSettled } from './editorHelpers.js';
 
 /**
- * Open a file using the editor's file input element
- * Uses Playwright's file chooser API to simulate file selection
+ * Opens a path on disk, or a { name, mimeType, buffer } payload,
+ * through the hidden file input
  */
-export async function openFile(page, filePath) {
-	const absolutePath = path.resolve(filePath);
-
+export async function openFile(page, file) {
 	const fileInput = page.locator('#openFile');
 	await fileInput.waitFor({ state: 'attached' });
+	await fileInput.setInputFiles(typeof file === 'string' ? path.resolve(file) : file);
 
-	await fileInput.setInputFiles(absolutePath);
-
-	// TODO: replace the timeout with a loading-complete indicator (canvas
-	// update, position info change, or loading modal gone)
-	await page.waitForTimeout(2000);
-
-	// The "updating editor" loading modal can outlast the timeout on slower
-	// machines, and it covers the viewport. Only wait on the loading modal, other
-	// modals depend on server, storage, or session state
-	await page.waitForFunction(
-		() => {
-			const modal = document.getElementById('modal');
-			const loading = document.getElementById('loadingModal');
-			return !modal?.open || loading?.classList.contains('hide');
-		},
-		null,
-		{ timeout: 15000 },
-	);
-}
-
-/**
- * Alternative method: Open file via drag and drop
- * TODO: This is a placeholder - implement if needed
- */
-export async function openFileViaDragDrop(_page, _filePath) {
-	throw new Error('Not implemented - use openFile() instead');
-}
-
-/**
- * Alternative method: Open file via URL if editor supports it
- * This attempts to use a window API if available
- */
-export async function openFileViaURL(page, fileURL) {
-	const loaded = await page.evaluate(url => {
-		if (window.Load && window.Load.loadFileFromUrl) {
-			window.Load.loadFileFromUrl(url);
-			return true;
-		}
-		return false;
-	}, fileURL);
-
-	if (!loaded) {
-		throw new Error('Load API not available on window object');
-	}
-
-	// TODO: Replace timeout with specific loading complete indicator
-	await page.waitForTimeout(2000);
+	// an art open clears the input once its doc lands or its parse
+	// fails; image and archive opens clear it up front, before their
+	// async work, so this wait holds for art files only
+	await expect(fileInput).toHaveValue('', { timeout: 15000 });
+	await loadSettled(page);
 }

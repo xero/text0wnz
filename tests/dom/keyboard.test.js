@@ -1,549 +1,492 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, fireEvent } from '@testing-library/dom';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom';
+import State from '../../src/js/client/state.js';
+import Toolbar from '../../src/js/client/toolbar.js';
+import {
+	createPaintShortcuts,
+	createSegmentedControl,
+} from '../../src/js/client/ui.js';
+import {
+	createCursor,
+	createKeyboardController,
+	createPasteTool,
+	createSelectionTool,
+} from '../../src/js/client/keyboard.js';
 
-describe('Keyboard Shortcuts DOM Tests', () => {
+vi.mock('../../src/js/client/state.js', () => ({ default: {} }));
+
+vi.mock('../../src/js/client/toolbar.js', () => ({ default: { switchTool: vi.fn() } }));
+
+// these handlers sit on the document and decide by focus, so the keys
+// go through user-event from whatever element holds focus
+describe('Keyboard shortcuts and focus', () => {
 	let user;
+	let listeners;
+
+	const focusField = tag => {
+		const el = document.createElement(tag);
+		document.body.appendChild(el);
+		el.focus();
+		return el;
+	};
+
+	const addById = (tag, ...ids) =>
+		ids.forEach(id => {
+			const el = document.createElement(tag);
+			el.id = id;
+			document.body.appendChild(el);
+		});
+
+	const createTool = () => {
+		const item = () => document.createElement('div');
+		return createPasteTool(item(), item(), item(), item());
+	};
 
 	beforeEach(() => {
 		document.body.innerHTML = '';
 		user = userEvent.setup();
-		vi.clearAllMocks();
+		Object.assign(State, {
+			palette: {
+				getForegroundColor: vi.fn(() => 7),
+				setForegroundColor: vi.fn(),
+				getBackgroundColor: vi.fn(() => 0),
+			},
+			cursor: { isVisible: vi.fn(() => false) },
+			selectionCursor: {
+				isVisible: vi.fn(() => true),
+				getSelection: vi.fn(() => ({ x: 1, y: 2, width: 3, height: 1 })),
+				getElement: vi.fn(() => document.createElement('div')),
+				show: vi.fn(),
+				hide: vi.fn(),
+			},
+			textArtCanvas: {
+				startUndo: vi.fn(),
+				getAreaCells: vi.fn(() => ({ cells: [], width: 3, height: 1 })),
+				setAreaCells: vi.fn(),
+				deleteArea: vi.fn(),
+				getBlock: vi.fn(() => ({
+					charCode: 65,
+					foregroundColor: 7,
+					backgroundColor: 0,
+				})),
+				draw: vi.fn(),
+			},
+			pasteTool: { disable: vi.fn() },
+		});
+		// the paste tool and the paint shortcuts hook the document for
+		// good: drop every listener a test adds before the next one runs
+		listeners = [];
+		const add = document.addEventListener;
+		vi.spyOn(document, 'addEventListener').mockImplementation((...args) => {
+			listeners.push(args);
+			add.apply(document, args);
+		});
 	});
 
-	describe('Keyboard Event Handling', () => {
-		it('should trigger action on keyboard shortcut', async () => {
-			const handleShortcut = vi.fn();
+	afterEach(() => {
+		listeners.forEach(args => document.removeEventListener(...args));
+		vi.restoreAllMocks();
+	});
 
+	it('paint shortcuts fire from the page and never from a text entry', async () => {
+		const brush = document.createElement('button');
+		const onClick = vi.fn();
+		brush.addEventListener('click', onClick);
+		document.body.appendChild(brush);
+		createPaintShortcuts({ f: brush });
+
+		await user.keyboard('f3');
+		expect(onClick).toHaveBeenCalledTimes(1);
+		expect(State.palette.setForegroundColor).toHaveBeenCalledWith(3);
+
+		for (const tag of ['input', 'textarea', 'select']) {
+			focusField(tag);
+			await user.keyboard('f3');
+		}
+		expect(onClick).toHaveBeenCalledTimes(1);
+		expect(State.palette.setForegroundColor).toHaveBeenCalledTimes(1);
+	});
+
+	it('Ctrl paint shortcuts fire from the page and never from a text entry', async () => {
+		const attrib = document.createElement('button');
+		const onClick = vi.fn();
+		attrib.addEventListener('click', onClick);
+		document.body.appendChild(attrib);
+		createPaintShortcuts({ a: attrib });
+
+		await user.keyboard('{Control>}a{/Control}');
+		expect(onClick).toHaveBeenCalledTimes(1);
+
+		for (const tag of ['input', 'textarea', 'select']) {
+			focusField(tag);
+			await user.keyboard('{Control>}a{/Control}');
+		}
+		expect(onClick).toHaveBeenCalledTimes(1);
+
+		// Ctrl+A in a field is the browser's select all
+		const field = focusField('input');
+		field.value = 'abc';
+		field.setSelectionRange(3, 3);
+		await user.keyboard('{Control>}a{/Control}');
+		expect([field.selectionStart, field.selectionEnd]).toEqual([0, 3]);
+	});
+
+	it('Ctrl+C, Ctrl+V, and Ctrl+Backspace copy, paste, and delete the selection', async () => {
+		const { getAreaCells, setAreaCells, deleteArea } = State.textArtCanvas;
+		const tool = createTool();
+
+		tool.setSelection(1, 2, 3, 1);
+		await user.keyboard('{Control>}c{/Control}');
+		expect(getAreaCells).toHaveBeenCalledWith(1, 2, 3, 1);
+
+		tool.setSelection(5, 6, 3, 1);
+		await user.keyboard('{Control>}v{/Control}');
+		expect(setAreaCells).toHaveBeenCalledWith(
+			getAreaCells.mock.results[0].value,
+			5,
+			6,
+		);
+
+		await user.keyboard('{Control>}{Backspace}{/Control}');
+		expect(deleteArea).toHaveBeenCalledWith(5, 6, 3, 1, 0);
+	});
+
+	it('clipboard keys in a text entry leave the canvas alone', async () => {
+		const { getAreaCells, setAreaCells, deleteArea } = State.textArtCanvas;
+		const tool = createTool();
+		tool.setSelection(1, 2, 3, 1);
+		// a filled buffer, so a leaked Ctrl+V would have something to paste
+		await user.keyboard('{Control>}c{/Control}');
+
+		focusField('input');
+		await user.keyboard('{Control>}v{/Control}{Control>}x{/Control}');
+		focusField('textarea');
+		await user.keyboard('{Control>}c{/Control}{Control>}{Backspace}{/Control}');
+
+		expect(getAreaCells).toHaveBeenCalledTimes(1);
+		expect(setAreaCells).not.toHaveBeenCalled();
+		expect(deleteArea).not.toHaveBeenCalled();
+	});
+
+	it('clipboard keys on a clicked checkbox in a dialog leave the canvas alone', async () => {
+		const { getAreaCells, setAreaCells, deleteArea } = State.textArtCanvas;
+		const tool = createTool();
+		tool.setSelection(1, 2, 3, 1);
+		// a filled buffer, so a leaked Ctrl+V would have something to paste
+		await user.keyboard('{Control>}c{/Control}');
+
+		const box = document.createElement('input');
+		box.type = 'checkbox';
+		document.body.appendChild(box);
+		await user.click(box);
+		State.modal = { isOpen: () => true };
+		try {
+			await user.keyboard(
+				'{Control>}x{/Control}{Control>}v{/Control}{Control>}{Backspace}{/Control}',
+			);
+		} finally {
+			delete State.modal;
+		}
+
+		expect(getAreaCells).toHaveBeenCalledTimes(1);
+		expect(setAreaCells).not.toHaveBeenCalled();
+		expect(deleteArea).not.toHaveBeenCalled();
+	});
+
+	it('selection keys flip and toggle move mode from the page only', async () => {
+		addById('div', 'viewport', 'selectionToolbar');
+		addById('button', 'flipHorizontal', 'flipVertical', 'moveBlocks');
+		const tool = createSelectionTool();
+		tool.enable();
+
+		focusField('input');
+		// '[[' is user-event's escape for a literal '['
+		await user.keyboard('[[m');
+		expect(State.textArtCanvas.startUndo).not.toHaveBeenCalled();
+		expect(tool.isMoveMode()).toBe(false);
+
+		document.activeElement.blur();
+		await user.keyboard('[[m');
+		expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
+		expect(tool.isMoveMode()).toBe(true);
+		tool.disable();
+	});
+
+	it('Enter presses a button the keyboard reached in the selection tool', async () => {
+		Toolbar.switchTool.mockClear();
+		addById('div', 'viewport', 'selectionToolbar');
+		addById('button', 'flipHorizontal', 'flipVertical', 'moveBlocks');
+		const tool = createSelectionTool();
+		tool.enable();
+		const button = document.createElement('button');
+		const onClick = vi.fn();
+		button.addEventListener('click', onClick);
+		document.body.appendChild(button);
+		button.focus();
+		await user.keyboard('{Enter}');
+		tool.disable();
+		expect(onClick).toHaveBeenCalledTimes(1);
+		expect(Toolbar.switchTool).not.toHaveBeenCalled();
+	});
+
+	describe('the keyboard tool and focus', () => {
+		let controller;
+		let drawn;
+
+		const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+		const clickable = () => {
 			const button = document.createElement('button');
-			button.id = 'test-button';
-			button.textContent = 'Action (Ctrl+K)';
-			button.setAttribute('aria-label', 'Action');
+			const onClick = vi.fn();
+			button.addEventListener('click', onClick);
 			document.body.appendChild(button);
+			return { button, onClick };
+		};
 
-			document.addEventListener('keydown', e => {
-				if (e.ctrlKey && e.key === 'k') {
-					e.preventDefault();
-					handleShortcut();
-				}
+		beforeEach(() => {
+			addById('div', 'viewport');
+			Object.assign(State, {
+				font: { getWidth: () => 8, getHeight: () => 16 },
+				positionInfo: { update: vi.fn() },
+				pasteTool: { setSelection: vi.fn(), disable: vi.fn() },
 			});
-
-			await user.keyboard('{Control>}k{/Control}');
-
-			expect(handleShortcut).toHaveBeenCalled();
+			State.textArtCanvas.getColumns = () => 80;
+			State.textArtCanvas.getRows = () => 25;
+			State.selectionCursor.isVisible = vi.fn(() => false);
+			State.cursor = createCursor(document.createElement('div'));
+			State.cursor.move(2, 3);
+			drawn = [];
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback((code, _fg, _bg, x, y) => drawn.push({ code, x, y })));
+			controller = createKeyboardController();
+			controller.enable();
 		});
 
-		it('should support multiple keyboard shortcuts', async () => {
-			const handlers = {
-				copy: vi.fn(),
-				paste: vi.fn(),
-				cut: vi.fn(),
-			};
+		afterEach(() => controller.disable());
 
-			document.addEventListener('keydown', e => {
-				if (e.ctrlKey && e.key === 'c') {
-					e.preventDefault();
-					handlers.copy();
-				}
-				if (e.ctrlKey && e.key === 'v') {
-					e.preventDefault();
-					handlers.paste();
-				}
-				if (e.ctrlKey && e.key === 'x') {
-					e.preventDefault();
-					handlers.cut();
-				}
-			});
-
-			await user.keyboard('{Control>}c{/Control}');
-			expect(handlers.copy).toHaveBeenCalled();
-
-			await user.keyboard('{Control>}v{/Control}');
-			expect(handlers.paste).toHaveBeenCalled();
-
-			await user.keyboard('{Control>}x{/Control}');
-			expect(handlers.cut).toHaveBeenCalled();
+		it('a frames panel field keeps its digits, Backspace, Enter, and arrows', async () => {
+			const field = document.createElement('input');
+			field.type = 'number';
+			field.id = 'frameDelay';
+			document.body.appendChild(field);
+			field.focus();
+			await user.keyboard('12{Backspace}{Enter}{ArrowUp}{Home}');
+			await settle();
+			expect(field.value).toBe('1');
+			expect(drawn).toEqual([]);
+			expect([State.cursor.getX(), State.cursor.getY()]).toEqual([2, 3]);
 		});
 
-		it('should handle function keys', async () => {
-			const handleF1 = vi.fn();
-
-			document.addEventListener('keydown', e => {
-				if (e.key === 'F1') {
-					e.preventDefault();
-					handleF1();
-				}
-			});
-
-			await user.keyboard('{F1}');
-
-			expect(handleF1).toHaveBeenCalled();
+		it('Space presses a button the keyboard reached and types nothing', async () => {
+			const { button, onClick } = clickable();
+			button.focus();
+			await user.keyboard(' ');
+			await settle();
+			expect(onClick).toHaveBeenCalledTimes(1);
+			expect(drawn).toEqual([]);
 		});
 
-		it('should distinguish between different modifier keys', async () => {
-			const handlers = {
-				ctrl: vi.fn(),
-				alt: vi.fn(),
-				shift: vi.fn(),
-			};
-
-			document.addEventListener('keydown', e => {
-				if (e.ctrlKey && e.key === 's' && !e.altKey && !e.shiftKey) {
-					e.preventDefault();
-					handlers.ctrl();
-				}
-				if (e.altKey && e.key === 's' && !e.ctrlKey && !e.shiftKey) {
-					e.preventDefault();
-					handlers.alt();
-				}
-				if (
-					e.shiftKey &&
-					e.key.toLowerCase() === 's' &&
-					!e.ctrlKey &&
-					!e.altKey
-				) {
-					e.preventDefault();
-					handlers.shift();
-				}
-			});
-
-			// Use fireEvent for more control over modifier keys
-			fireEvent.keyDown(document, { key: 's', ctrlKey: true });
-			expect(handlers.ctrl).toHaveBeenCalled();
-
-			fireEvent.keyDown(document, { key: 's', altKey: true });
-			expect(handlers.alt).toHaveBeenCalled();
-
-			fireEvent.keyDown(document, { key: 'S', shiftKey: true });
-			expect(handlers.shift).toHaveBeenCalled();
+		it('Space on a clicked button types a space and does not press it', async () => {
+			const { button, onClick } = clickable();
+			await user.click(button);
+			expect(document.activeElement).toBe(button);
+			await user.keyboard('a b');
+			await settle();
+			expect(onClick).toHaveBeenCalledTimes(1);
+			expect(drawn.map(cell => cell.code)).toEqual([97, 32, 98]);
 		});
-	});
 
-	describe('Keyboard Navigation', () => {
-		it('should navigate with arrow keys', async () => {
-			const items = [];
-			for (let i = 0; i < 4; i++) {
-				const item = document.createElement('button');
-				item.id = `item-${i}`;
-				item.textContent = `Item ${i}`;
-				item.setAttribute('tabindex', '0');
-				document.body.appendChild(item);
-				items.push(item);
+		// a touch tap focuses on the mouse events that follow its lift
+		it('Space after a tap on a button types a space and does not press it', async () => {
+			const { button, onClick } = clickable();
+			for (const type of ['pointerdown', 'pointerup', 'mousedown']) {
+				button.dispatchEvent(new Event(type, { bubbles: true }));
 			}
-
-			let currentIndex = 0;
-			items[currentIndex].focus();
-
-			document.addEventListener('keydown', e => {
-				if (e.key === 'ArrowDown') {
-					e.preventDefault();
-					currentIndex = Math.min(currentIndex + 1, items.length - 1);
-					items[currentIndex].focus();
-				}
-				if (e.key === 'ArrowUp') {
-					e.preventDefault();
-					currentIndex = Math.max(currentIndex - 1, 0);
-					items[currentIndex].focus();
-				}
-			});
-
-			await user.keyboard('{ArrowDown}');
-			expect(document.activeElement).toBe(items[1]);
-
-			await user.keyboard('{ArrowDown}');
-			expect(document.activeElement).toBe(items[2]);
-
-			await user.keyboard('{ArrowUp}');
-			expect(document.activeElement).toBe(items[1]);
+			button.focus();
+			button.dispatchEvent(new Event('mouseup', { bubbles: true }));
+			button.click();
+			await user.keyboard(' ');
+			await settle();
+			expect(onClick).toHaveBeenCalledTimes(1);
+			expect(drawn.map(cell => cell.code)).toEqual([32]);
 		});
 
-		it('should support tab navigation', async () => {
-			const button1 = document.createElement('button');
-			button1.id = 'btn1';
-			button1.textContent = 'Button 1';
-			button1.setAttribute('tabindex', '0');
-
-			const button2 = document.createElement('button');
-			button2.id = 'btn2';
-			button2.textContent = 'Button 2';
-			button2.setAttribute('tabindex', '0');
-
-			document.body.appendChild(button1);
-			document.body.appendChild(button2);
-
-			button1.focus();
-			expect(document.activeElement).toBe(button1);
-
-			await user.keyboard('{Tab}');
-			expect(document.activeElement).toBe(button2);
-		});
-
-		it('should support home/end keys for navigation', async () => {
-			const container = document.createElement('div');
-			container.setAttribute('role', 'list');
-			document.body.appendChild(container);
-
-			const items = [];
-			for (let i = 0; i < 5; i++) {
-				const item = document.createElement('div');
-				item.setAttribute('role', 'listitem');
-				item.setAttribute('tabindex', '0');
-				item.textContent = `Item ${i}`;
-				container.appendChild(item);
-				items.push(item);
+		// touch on the canvas moves no focus, so the control keeps it
+		it('Space and arrows after a press on the canvas go to the canvas', async () => {
+			const { button, onClick } = clickable();
+			button.focus();
+			addById('div', 'canvasContainer');
+			const tile = document.createElement('canvas');
+			document.getElementById('canvasContainer').appendChild(tile);
+			for (const type of ['pointerdown', 'pointerup']) {
+				tile.dispatchEvent(new Event(type, { bubbles: true }));
 			}
+			expect(document.activeElement).toBe(button);
+			await user.keyboard(' {ArrowDown}');
+			await settle();
+			expect(onClick).not.toHaveBeenCalled();
+			expect(drawn.map(cell => cell.code)).toEqual([32]);
+			expect([State.cursor.getX(), State.cursor.getY()]).toEqual([3, 4]);
+		});
 
-			let currentIndex = 2;
-			items[currentIndex].focus();
-
-			document.addEventListener('keydown', e => {
-				if (e.key === 'Home') {
-					e.preventDefault();
-					currentIndex = 0;
-					items[currentIndex].focus();
-				}
-				if (e.key === 'End') {
-					e.preventDefault();
-					currentIndex = items.length - 1;
-					items[currentIndex].focus();
-				}
+		describe('a clicked button that gets focus back', () => {
+			let button;
+			let onClick;
+			let elsewhere;
+			beforeEach(async () => {
+				elsewhere = document.createElement('button');
+				document.body.appendChild(elsewhere);
+				({ button, onClick } = clickable());
+				await user.click(button);
 			});
 
-			await user.keyboard('{Home}');
-			expect(document.activeElement).toBe(items[0]);
-
-			await user.keyboard('{End}');
-			expect(document.activeElement).toBe(items[4]);
-		});
-	});
-
-	describe('Shortcut Visual Indicators', () => {
-		it('should display keyboard shortcuts in UI', () => {
-			const button = document.createElement('button');
-			button.textContent = 'Save ';
-
-			const kbd = document.createElement('kbd');
-			kbd.textContent = 'Ctrl+S';
-			button.appendChild(kbd);
-
-			document.body.appendChild(button);
-
-			expect(screen.getByText(/save/i)).toBeInTheDocument();
-			expect(screen.getByText('Ctrl+S')).toBeInTheDocument();
-		});
-
-		it('should show shortcuts in tooltips', () => {
-			const button = document.createElement('button');
-			button.id = 'copy-btn';
-			button.textContent = 'Copy';
-			button.setAttribute('title', 'Copy (Ctrl+C)');
-			button.setAttribute('aria-label', 'Copy (Ctrl+C)');
-			document.body.appendChild(button);
-
-			expect(button).toHaveAttribute('title', 'Copy (Ctrl+C)');
-			expect(button).toHaveAttribute('aria-label', 'Copy (Ctrl+C)');
-		});
-
-		it('should render shortcut hints in menu items', () => {
-			const menu = document.createElement('div');
-			menu.setAttribute('role', 'menu');
-
-			const menuItem = document.createElement('div');
-			menuItem.setAttribute('role', 'menuitem');
-			menuItem.innerHTML = 'Undo <kbd>Ctrl+Z</kbd>';
-			menu.appendChild(menuItem);
-
-			document.body.appendChild(menu);
-
-			expect(screen.getByText('Undo')).toBeInTheDocument();
-			expect(screen.getByText('Ctrl+Z')).toBeInTheDocument();
-		});
-	});
-
-	describe('Text Input with Keyboard', () => {
-		it('should type text into input field', async () => {
-			const input = document.createElement('input');
-			input.id = 'text-input';
-			input.type = 'text';
-			input.setAttribute('aria-label', 'Text Input');
-			document.body.appendChild(input);
-
-			await user.type(input, 'Hello World');
-
-			expect(input).toHaveValue('Hello World');
-		});
-
-		it('should handle backspace key', async () => {
-			const input = document.createElement('input');
-			input.id = 'text-input';
-			input.type = 'text';
-			document.body.appendChild(input);
-
-			await user.type(input, 'Hello{Backspace}{Backspace}');
-
-			expect(input).toHaveValue('Hel');
-		});
-
-		it('should handle enter key in input', async () => {
-			const input = document.createElement('input');
-			input.id = 'text-input';
-			input.type = 'text';
-			document.body.appendChild(input);
-
-			const handleSubmit = vi.fn();
-			input.addEventListener('keypress', e => {
-				if (e.key === 'Enter') {
-					e.preventDefault();
-					handleSubmit();
-				}
+			it.each([
+				[
+					'a dialog closes',
+					async () => {
+						elsewhere.focus();
+						button.focus();
+					},
+				],
+				[
+					'Escape closes a menu',
+					async () => {
+						elsewhere.focus();
+						document.addEventListener('keydown', e => {
+							if (e.key === 'Escape') {
+								button.focus();
+							}
+						});
+						await user.keyboard('{Escape}');
+					},
+				],
+				[
+					'a window switch',
+					async () => {
+						window.dispatchEvent(new Event('blur'));
+						button.blur();
+						button.focus();
+					},
+				],
+			])('Space and arrows go to the canvas after %s', async (_, handBack) => {
+				await handBack();
+				expect(document.activeElement).toBe(button);
+				await user.keyboard(' {ArrowDown}');
+				await settle();
+				expect(onClick).toHaveBeenCalledTimes(1);
+				expect(drawn.map(cell => cell.code)).toEqual([32]);
+				expect([State.cursor.getX(), State.cursor.getY()]).toEqual([3, 4]);
 			});
 
-			await user.type(input, 'test{Enter}');
+			it('is the keyboard\'s again once Tab reaches it', async () => {
+				elsewhere.focus();
+				await user.tab();
+				expect(document.activeElement).toBe(button);
+				await user.keyboard(' ');
+				await settle();
+				expect(onClick).toHaveBeenCalledTimes(2);
+				expect(drawn).toEqual([]);
+			});
 
-			expect(handleSubmit).toHaveBeenCalled();
+			// a menu reopening focuses its last pick fresh, and a dialog
+			// that could not refocus its opener leaves it a fresh stop
+			it.each([
+				['after focus left it for the page', () => button.blur()],
+				[
+					'after a dialog closed without refocusing it',
+					() => {
+						elsewhere.focus();
+						document.body.dispatchEvent(new Event('close'));
+						elsewhere.blur();
+					},
+				],
+			])('is keyboard-reached when a script focuses it %s', async (_, away) => {
+				away();
+				button.focus();
+				await user.keyboard(' ');
+				await settle();
+				expect(onClick).toHaveBeenCalledTimes(2);
+				expect(drawn).toEqual([]);
+			});
 		});
 
-		it('should clear input with Ctrl+A and Delete', async () => {
-			const input = document.createElement('input');
-			input.id = 'text-input';
-			input.type = 'text';
-			input.value = 'Delete me';
-			document.body.appendChild(input);
-
-			input.focus();
-			await user.keyboard('{Control>}a{/Control}{Delete}');
-
-			expect(input).toHaveValue('');
+		it.each([
+			['a context menu', () => document.dispatchEvent(new Event('contextmenu'))],
+			['a window switch', () => window.dispatchEvent(new Event('blur'))],
+		])('a press %s ends leaves the next focus to the keyboard', async (_, end) => {
+			const { button, onClick } = clickable();
+			document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+			end();
+			button.focus();
+			await user.keyboard(' ');
+			await settle();
+			expect(onClick).toHaveBeenCalledTimes(1);
+			expect(drawn).toEqual([]);
 		});
-	});
 
-	describe('Accessibility with Keyboard', () => {
-		it('should activate button with Enter key', async () => {
+		it('arrows step a segmented control the keyboard reached and leave the canvas cursor', async () => {
+			const control = createSegmentedControl(
+				'testMode',
+				[
+					{ value: 'block', label: 'Block' },
+					{ value: 'oldskool', label: 'Old Skool' },
+				],
+				vi.fn(),
+			);
+			document.body.appendChild(control.getElement());
+			document.querySelector('#testMode [data-value="block"]').focus();
+			await user.keyboard('{ArrowRight}');
+			await settle();
+			expect(control.value()).toBe('oldskool');
+			expect([State.cursor.getX(), State.cursor.getY()]).toEqual([2, 3]);
+		});
+
+		it('letters and arrows after a click on a range slider go to the canvas', async () => {
+			const slider = document.createElement('input');
+			slider.type = 'range';
+			slider.value = '5';
+			document.body.appendChild(slider);
+			await user.click(slider);
+			const value = slider.value;
+			await user.keyboard('ab{ArrowDown}');
+			await settle();
+			expect(drawn.map(cell => cell.code)).toEqual([97, 98]);
+			expect([State.cursor.getX(), State.cursor.getY()]).toEqual([4, 4]);
+			expect(slider.value).toBe(value);
+		});
+
+		it('arrows on a clicked segmented control move the canvas cursor and leave the control', async () => {
+			const control = createSegmentedControl(
+				'testMode',
+				[
+					{ value: 'block', label: 'Block' },
+					{ value: 'oldskool', label: 'Old Skool' },
+				],
+				vi.fn(),
+			);
+			document.body.appendChild(control.getElement());
+			await user.click(document.querySelector('#testMode [data-value="block"]'));
+			await user.keyboard('{ArrowRight}');
+			await settle();
+			expect(control.value()).toBe('block');
+			expect([State.cursor.getX(), State.cursor.getY()]).toEqual([3, 3]);
+		});
+
+		it('clicks a focused button and leaves the cursor', async () => {
 			const button = document.createElement('button');
-			button.id = 'test-button';
-			button.textContent = 'Click me';
+			const onClick = vi.fn();
+			button.addEventListener('click', onClick);
 			document.body.appendChild(button);
-
-			const handleClick = vi.fn();
-			button.addEventListener('click', handleClick);
-
 			button.focus();
 			await user.keyboard('{Enter}');
-
-			expect(handleClick).toHaveBeenCalled();
+			expect(onClick).toHaveBeenCalledTimes(1);
+			expect([State.cursor.getX(), State.cursor.getY()]).toEqual([2, 3]);
 		});
 
-		it('should activate button with Space key', async () => {
-			const button = document.createElement('button');
-			button.id = 'test-button';
-			button.textContent = 'Click me';
-			document.body.appendChild(button);
-
-			const handleClick = vi.fn();
-			button.addEventListener('click', handleClick);
-
-			button.focus();
-			await user.keyboard('{ }');
-
-			expect(handleClick).toHaveBeenCalled();
-		});
-
-		it('should support aria-keyshortcuts attribute', () => {
-			const button = document.createElement('button');
-			button.id = 'save-button';
-			button.textContent = 'Save';
-			button.setAttribute('aria-label', 'Save');
-			button.setAttribute('aria-keyshortcuts', 'Control+S');
-			document.body.appendChild(button);
-
-			expect(button).toHaveAttribute('aria-keyshortcuts', 'Control+S');
-		});
-	});
-
-	describe('Preventing Default Behavior', () => {
-		it('should prevent default browser shortcuts', async () => {
-			const handleSave = vi.fn();
-
-			const preventDefaultHandler = e => {
-				if (e.ctrlKey && e.key === 's') {
-					e.preventDefault();
-					handleSave();
-				}
-			};
-
-			document.addEventListener('keydown', preventDefaultHandler);
-
-			const event = new KeyboardEvent('keydown', {
-				key: 's',
-				ctrlKey: true,
-				bubbles: true,
-			});
-			const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-
-			document.dispatchEvent(event);
-
-			expect(preventDefaultSpy).toHaveBeenCalled();
-			expect(handleSave).toHaveBeenCalled();
-
-			document.removeEventListener('keydown', preventDefaultHandler);
-		});
-
-		it('should stop propagation when needed', async () => {
-			const outerHandler = vi.fn();
-			const innerHandler = vi.fn();
-
-			const outer = document.createElement('div');
-			outer.id = 'outer';
-			const inner = document.createElement('div');
-			inner.id = 'inner';
-			inner.setAttribute('tabindex', '0');
-
-			outer.appendChild(inner);
-			document.body.appendChild(outer);
-
-			outer.addEventListener('keydown', outerHandler);
-			inner.addEventListener('keydown', e => {
-				e.stopPropagation();
-				innerHandler();
-			});
-
-			inner.focus();
-			await user.keyboard('a');
-
-			expect(innerHandler).toHaveBeenCalled();
-			expect(outerHandler).not.toHaveBeenCalled();
-		});
-	});
-
-	describe('Edge Cases', () => {
-		it('should handle multiple simultaneous key presses', () => {
-			const handler = vi.fn();
-
-			document.addEventListener('keydown', e => {
-				if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'k') {
-					e.preventDefault();
-					handler();
-				}
-			});
-
-			fireEvent.keyDown(document, { key: 'K', ctrlKey: true, shiftKey: true });
-
-			expect(handler).toHaveBeenCalled();
-		});
-
-		it('should handle rapid key presses', async () => {
-			const handler = vi.fn();
-
-			const input = document.createElement('input');
-			input.id = 'rapid-input';
-			document.body.appendChild(input);
-
-			input.addEventListener('keydown', handler);
-
-			await user.type(input, 'abcdefghij');
-
-			expect(handler).toHaveBeenCalledTimes(10);
-		});
-
-		it('should handle special characters', async () => {
-			const input = document.createElement('input');
-			input.id = 'special-input';
-			input.type = 'text';
-			document.body.appendChild(input);
-
-			await user.type(input, '!@#$%^&*()');
-
-			expect(input).toHaveValue('!@#$%^&*()');
-		});
-
-		it('should handle keys that do not produce characters', async () => {
-			const handlers = {
-				escape: vi.fn(),
-				capsLock: vi.fn(),
-			};
-
-			document.addEventListener('keydown', e => {
-				if (e.key === 'Escape') {
-					handlers.escape();
-				}
-				if (e.key === 'CapsLock') {
-					handlers.capsLock();
-				}
-			});
-
-			await user.keyboard('{Escape}');
-			expect(handlers.escape).toHaveBeenCalled();
-
-			await user.keyboard('{CapsLock}');
-			expect(handlers.capsLock).toHaveBeenCalled();
-		});
-	});
-
-	describe('Global vs Local Shortcuts', () => {
-		it('should handle global shortcuts at document level', async () => {
-			const globalHandler = vi.fn();
-
-			document.addEventListener('keydown', e => {
-				if (e.ctrlKey && e.key === 'n') {
-					e.preventDefault();
-					globalHandler();
-				}
-			});
-
-			await user.keyboard('{Control>}n{/Control}');
-
-			expect(globalHandler).toHaveBeenCalled();
-		});
-
-		it('should handle local shortcuts on specific elements', async () => {
-			const localHandler = vi.fn();
-
-			const textarea = document.createElement('textarea');
-			textarea.id = 'local-area';
-			document.body.appendChild(textarea);
-
-			textarea.addEventListener('keydown', e => {
-				if (e.ctrlKey && e.key === 'b') {
-					e.preventDefault();
-					localHandler();
-				}
-			});
-
-			textarea.focus();
-			await user.keyboard('{Control>}b{/Control}');
-
-			expect(localHandler).toHaveBeenCalled();
-		});
-
-		it('should prevent shortcuts when input is focused', async () => {
-			const shortcutHandler = vi.fn();
-
-			const input = document.createElement('input');
-			input.id = 'text-input';
-			input.type = 'text';
-			document.body.appendChild(input);
-
-			document.addEventListener('keydown', e => {
-				if (
-					e.target.tagName !== 'INPUT' &&
-					e.target.tagName !== 'TEXTAREA' &&
-					e.ctrlKey &&
-					e.key === 'k'
-				) {
-					shortcutHandler();
-				}
-			});
-
-			input.focus();
-			fireEvent.keyDown(input, { key: 'k', ctrlKey: true });
-
-			expect(shortcutHandler).not.toHaveBeenCalled();
-
-			document.body.focus();
-			fireEvent.keyDown(document, { key: 'k', ctrlKey: true });
-
-			expect(shortcutHandler).toHaveBeenCalled();
+		it('newlines the canvas from the page', async () => {
+			await user.keyboard('{Enter}');
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect([State.cursor.getX(), State.cursor.getY()]).toEqual([0, 4]);
 		});
 	});
 });

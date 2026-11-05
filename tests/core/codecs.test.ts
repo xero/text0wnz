@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { buildSauce, parseSauce } from '../../src/js/core/codecs/sauce.js';
+import {
+	buildSauce,
+	commentText,
+	fitComments,
+	parseSauce,
+} from '../../src/js/core/codecs/sauce.js';
+import { decodeTundra, encodeTundra } from '../../src/js/core/codecs/tundra.js';
 import { decodeBin, encodeBin } from '../../src/js/core/codecs/bin.js';
+import { CodecError } from '../../src/js/core/codecs/util.js';
 import {
 	compressXBin,
 	decodeXBin,
@@ -22,8 +29,10 @@ import {
 	rgbColor,
 } from '../../src/js/core/doc.js';
 import {
+	concatBytes,
 	makeAnsi,
 	makeBin,
+	makeSauce,
 	makeUtf8Ansi,
 	makeXBin,
 	makeXBinFont,
@@ -91,12 +100,252 @@ describe('sauce codec', () => {
 				rows: 25,
 				iceColors: true,
 				fontName: 'IBM VGA',
-				flagsAndTInfo: false,
 				date: FIXED_DATE,
 			}),
 		);
 		expect(record?.flags).toBe(0);
 		expect(record?.fontName).toBe('');
+	});
+
+	it('reads Character fields as CP437 so a rebuild writes the same bytes', () => {
+		const options = {
+			dataType: 1,
+			fileType: 1,
+			fileSize: 10,
+			columns: 80,
+			rows: 25,
+			title: 'café £5 ☺',
+			author: 'ÄL',
+			group: 'grün',
+			comments: 'naïve résumé\n│ box │',
+			date: FIXED_DATE,
+		};
+		const bytes = buildSauce(options);
+		const record = parseSauce(bytes);
+		expect(record?.title).toBe('café £5 ☺');
+		expect(record?.author).toBe('ÄL');
+		expect(record?.group).toBe('grün');
+		expect(record?.comments).toEqual(['naïve résumé', '│ box │']);
+		expect(
+			buildSauce({
+				...options,
+				title: record?.title,
+				author: record?.author,
+				group: record?.group,
+				comments: record?.comments.join('\n'),
+			}),
+		).toEqual(bytes);
+	});
+
+	it('keeps a trailing CP437 0xA0 that a whitespace trim would eat', () => {
+		// CP437 0xA0 is á; read as latin-1 it is NBSP, which \s matches
+		const record = parseSauce(
+			buildSauce({
+				dataType: 1,
+				fileSize: 10,
+				columns: 80,
+				rows: 25,
+				title: 'olá',
+				date: FIXED_DATE,
+			}),
+		);
+		expect(record?.title).toBe('olá');
+	});
+
+	it('ends Character and ZString fields at the first NUL', () => {
+		// SAUCE §Layout note 3: some writers terminate with NUL and leave
+		// garbage behind it
+		const bytes = makeSauce({
+			title: 'Title\0garbage!',
+			author: 'xero\0zzzz',
+			fontName: '\0\0SAUCE-ADDER V1.3',
+			comments: ['kept\0dropped'],
+		});
+		const record = parseSauce(concatBytes([Uint8Array.of(0x41, 0x1a), bytes]));
+		expect(record?.title).toBe('Title');
+		expect(record?.author).toBe('xero');
+		expect(record?.fontName).toBe('');
+		expect(record?.comments).toEqual(['kept']);
+	});
+
+	it('round-trips indented and blank comment lines byte for byte', () => {
+		// PabloDraw SauceInfo.cs, SauceComment.Save keeps both
+		const lines = ['  indented', '', 'third'];
+		const original = makeBin({
+			columns: 160,
+			rows: 2,
+			sauce: { comments: lines },
+		});
+		const decoded = decodeBin(original);
+		expect(decoded.sauce?.comments).toEqual(lines);
+		expect(decoded.meta.comments).toBe('  indented\n\nthird');
+		const encoded = encodeBin(decoded.doc, {
+			meta: decoded.meta,
+			date: FIXED_DATE,
+		});
+		const comnt = (bytes: Uint8Array) =>
+			Array.from(
+				bytes.subarray(bytes.length - 128 - 5 - 3 * 64, bytes.length - 128),
+			);
+		expect(comnt(encoded)).toEqual(comnt(original));
+		expect(encoded[encoded.length - 128 + 104]).toBe(3);
+	});
+
+	const commentLines = (comments: string) =>
+		parseSauce(
+			buildSauce({ dataType: 1, fileSize: 0, columns: 80, rows: 25, comments }),
+		)?.comments;
+
+	it('writes a blank line for whitespace only and for a trailing newline', () => {
+		expect(commentLines('   ')).toEqual(['']);
+		expect(commentLines('one\n')).toEqual(['one', '']);
+		expect(commentLines('\n\n')).toEqual(['', '', '']);
+	});
+
+	it('writes no COMNT block for empty comment text', () => {
+		expect(
+			buildSauce({
+				dataType: 1,
+				fileSize: 0,
+				columns: 80,
+				rows: 25,
+				comments: '',
+			}),
+		).toHaveLength(128);
+	});
+
+	it('chunks a long line at 64 bytes and keeps a chunk of only spaces', () => {
+		const long = `${'x'.repeat(64)}  ${'y'.repeat(3)}`;
+		expect(commentLines(long)).toEqual(['x'.repeat(64), '  yyy']);
+		expect(commentLines(`${'x'.repeat(64)}   `)).toEqual(['x'.repeat(64), '']);
+	});
+
+	it('caps blank comment lines at 255 like any other', () => {
+		expect(commentLines('\n'.repeat(300))).toHaveLength(255);
+	});
+
+	it('round-trips a comment block that ends in a blank line', () => {
+		const original = makeBin({
+			columns: 160,
+			rows: 2,
+			sauce: { comments: ['one', ''] },
+		});
+		const decoded = decodeBin(original);
+		expect(decoded.meta.comments).toBe('one\n');
+		const encoded = encodeBin(decoded.doc, {
+			meta: decoded.meta,
+			date: FIXED_DATE,
+		});
+		const comnt = (bytes: Uint8Array) => bytes.slice(-128 - 5 - 2 * 64, -128);
+		expect(comnt(encoded)).toEqual(comnt(original));
+		expect(encoded[encoded.length - 128 + 104]).toBe(2);
+	});
+
+	it('round-trips a comment block of one blank line', () => {
+		const original = makeBin({
+			columns: 160,
+			rows: 2,
+			sauce: { comments: [''] },
+		});
+		const decoded = decodeBin(original);
+		expect(decoded.meta.comments).toBe(' ');
+		const encoded = encodeBin(decoded.doc, {
+			meta: decoded.meta,
+			date: FIXED_DATE,
+		});
+		const comnt = (bytes: Uint8Array) => bytes.slice(-128 - 5 - 64, -128);
+		expect(comnt(encoded)).toEqual(comnt(original));
+		expect(encoded[encoded.length - 128 + 104]).toBe(1);
+	});
+
+	it('reads one blank comment line as a space in every SAUCE codec', () => {
+		const doc = createDocV3({ columns: 80, rows: 1 });
+		const meta = { title: '', author: '', group: '', comments: ' ' };
+		for (const [encode, decode] of [
+			[encodeAns, decodeAns],
+			[encodeBin, decodeBin],
+			[encodeXBin, decodeXBin],
+			[encodeTundra, decodeTundra],
+		] as const) {
+			const bytes = encode(doc, { meta, date: FIXED_DATE });
+			expect(readSauce(bytes)?.comments).toEqual(['']);
+			expect(decode(bytes).meta?.comments).toBe(' ');
+		}
+	});
+
+	it('reads no block as empty text and any other block as its joined lines', () => {
+		expect(commentText([])).toBe('');
+		expect(commentText(['', ''])).toBe('\n');
+		expect(commentText(['', 'a'])).toBe('\na');
+		expect(commentText(['  a', ''])).toBe('  a\n');
+	});
+
+	it('counts slots by CP437 byte, not UTF-16 unit', () => {
+		expect(commentLines('é'.repeat(70))).toEqual([
+			'é'.repeat(64),
+			'é'.repeat(6),
+		]);
+		expect(commentLines('🌍'.repeat(64))).toEqual(['?'.repeat(64)]);
+		expect(fitComments('🌍'.repeat(65))).toEqual(['🌍'.repeat(65), 2]);
+	});
+
+	it('fills exactly 255 slots and cuts the line that crosses the last', () => {
+		const lines = (n: number) => Array(n).fill('a').join('\n');
+		expect(commentLines(lines(255))).toHaveLength(255);
+		expect(commentLines(lines(256))).toEqual(Array(255).fill('a'));
+		const crossing = `${'\n'.repeat(254)}${'x'.repeat(128)}\nlost`;
+		const kept = `${'\n'.repeat(254)}${'x'.repeat(64)}`;
+		expect(fitComments(crossing)).toEqual([kept, 255]);
+		expect(commentLines(crossing)?.slice(-1)).toEqual(['x'.repeat(64)]);
+	});
+
+	it('fits comments to the slots buildSauce writes', () => {
+		for (const text of [
+			'',
+			'a',
+			'\n',
+			'   ',
+			'x'.repeat(64),
+			'x'.repeat(65),
+			'\n'.repeat(300),
+			'x'.repeat(20000),
+			`${'\n'.repeat(254)}${'x'.repeat(100)}`,
+		]) {
+			const [fitted, slots] = fitComments(text);
+			const sauce = buildSauce({
+				dataType: 1,
+				fileSize: 0,
+				columns: 80,
+				rows: 25,
+				comments: text,
+			});
+			expect(sauce[sauce.length - 128 + 104]).toBe(slots);
+			expect(sauce.length).toBe(slots ? 5 + slots * 64 + 128 : 128);
+			expect(fitComments(fitted)).toEqual([fitted, slots]);
+		}
+	});
+
+	it('reads only the payload fence from an unknown version', () => {
+		// SAUCE §Layout note 6; pre-standard writers leave stale file
+		// bytes where TFlags and TInfoS sit
+		const record = makeSauce({
+			fileSize: 3,
+			tinfo1: 40,
+			title: 'Fatal Error',
+			flags: 0x6c,
+			fontName: 'IBM VGA50',
+		});
+		record[5] = 0x20;
+		record[6] = 0x20;
+		const parsed = parseSauce(
+			concatBytes([Uint8Array.of(0x41, 0x42, 0x43, 0x1a), record]),
+		);
+		expect(parsed?.payloadSize).toBe(3);
+		expect(parsed?.title).toBe('');
+		expect(parsed?.tInfo1).toBe(0);
+		expect(parsed?.flags).toBe(0);
+		expect(parsed?.iceColors).toBe(false);
+		expect(parsed?.fontName).toBe('');
 	});
 });
 
@@ -143,6 +392,19 @@ describe('bin codec', () => {
 		expect(() => encodeBin(d1.doc)).toThrow(/even column/);
 	});
 
+	it('refuses 2 columns, whose FileType 1 reopens at 160', () => {
+		const d1 = decodeBin(makeBin({ columns: 160, rows: 2, seed: 1 }));
+		d1.doc.resize(2, 2);
+		expect(() => encodeBin(d1.doc)).toThrow(CodecError);
+		expect(() => encodeBin(d1.doc)).toThrow(/at least 4 columns/);
+	});
+
+	it('keeps 4 columns, the narrowest width that reopens as saved', () => {
+		const d1 = decodeBin(makeBin({ columns: 160, rows: 2, seed: 1 }));
+		d1.doc.resize(4, 2);
+		expect(decodeBin(encodeBin(d1.doc)).doc.getColumns()).toBe(4);
+	});
+
 	it('pads a trailing partial row instead of throwing', () => {
 		// 160 default columns, 1.5 rows of payload: the tail row pads
 		const d = decodeBin(new Uint8Array(480).fill(0x41));
@@ -160,6 +422,34 @@ describe('bin codec', () => {
 		const u16 = v3ToU16(d.doc).imageData;
 		expect(u16[239]).toBe(0x4141);
 		expect(u16[240]).toBe(0);
+	});
+
+	it('opens no blank row for a lone byte past a whole row', () => {
+		expect(decodeBin(new Uint8Array(641)).doc.getRows()).toBe(2);
+	});
+
+	it('reads a FileType 1 record as the 160-column default', () => {
+		// PabloDraw Binary.cs, GetWidth: wild BINs stamp the ANSi FileType
+		const bytes = makeBin({
+			columns: 160,
+			rows: 3,
+			seed: 2,
+			sauce: { filetype: 1 },
+		});
+		const d = decodeBin(bytes);
+		expect(d.doc.getColumns()).toBe(160);
+		expect(d.doc.getRows()).toBe(3);
+	});
+
+	it('ignores the TInfo1 width of a non-BinaryText record', () => {
+		// SAUCE adders stamp 80x25 Character records on 160-column BINs
+		const bytes = makeBin({
+			columns: 160,
+			rows: 2,
+			seed: 4,
+			sauce: { datatype: 1, filetype: 1, tinfo1: 80, tinfo2: 25 },
+		});
+		expect(decodeBin(bytes).doc.getColumns()).toBe(160);
 	});
 
 	it('pads partial rows under a SAUCE record without reading the trailer', () => {
@@ -236,7 +526,7 @@ describe('xbin codec', () => {
 		expect(d2.font512).toBe(true);
 		expect(d2.fontBytes).toEqual(font);
 		expect(d2.palette6).toEqual(palette);
-		// lossy: the upper page is non-identity glyph defs by design now
+		// lossy: the upper page is non-identity glyph defs by design
 		expect(v3ToU16Lossy(d2.doc).imageData).toEqual(
 			v3ToU16Lossy(d1.doc).imageData,
 		);
@@ -244,7 +534,8 @@ describe('xbin codec', () => {
 	});
 
 	it('compression engages only when it wins', () => {
-		// Highly regular data compresses; the encoder sets flag bit 2
+		// uniform cells compress; XBin §Flags, Compress is bit 2 of header
+		// byte 10
 		const uniform = decodeBin(makeBin({ columns: 160, rows: 4, seed: 2 }));
 		uniform.doc.frames[0].glyph.fill(0x20);
 		uniform.doc.frames[0].fg.fill(uniform.doc.getCell(0, 0, 0).fg);
@@ -259,8 +550,9 @@ describe('xbin codec', () => {
 	});
 
 	it('reads oversize font heights raw like PabloDraw and round-trips them', () => {
-		// the height sizes the font block: a clamp would misread the
-		// image offset; 33-255 stays raw by deliberate disposition
+		// the height sizes the font block, so a clamp would misread the
+		// image offset; 33-255, past XBin §Font's 32 max, stays raw on
+		// purpose
 		const font = makeXBinFont(256, 200);
 		const bytes = makeXBin({
 			columns: 4,
@@ -273,7 +565,7 @@ describe('xbin codec', () => {
 		const d1 = decodeXBin(bytes);
 		expect(d1.fontHeight).toBe(200);
 		expect(d1.fontBytes?.length).toBe(256 * 200);
-		// image offset math held through the big font block
+		// image offset math holds through the big font block
 		expect(d1.doc.getCell(0, 0, 0).glyph & 0xffff).toBe(65);
 		const encoded = encodeXBin(d1.doc, {
 			fontBytes: d1.fontBytes,
@@ -295,7 +587,7 @@ describe('xbin codec', () => {
 			}),
 		);
 		const font = makeXBinFont(256, 16);
-		// 300 used to wrap the header byte to 44 and corrupt every reader
+		// 300 would wrap the header byte to 44 and corrupt every reader
 		expect(() =>
 			encodeXBin(d.doc, { fontBytes: font, fontHeight: 300 }),
 		).toThrow(/font height/);
@@ -365,19 +657,19 @@ describe('ans codec', () => {
 		expect(encodeUtf8(d2.doc, { date: FIXED_DATE })).toEqual(e1);
 	});
 
-	it('v2-style full-width-plus-LF files no longer double their rows', () => {
-		// Fixture mimics the v2 writer: full-width UTF-8 rows each followed
-		// by ESC[0m + LF, no SAUCE. Glyphs must land on the original grid
-		// with no doubled blank rows. Colors cannot fully survive: the v2
-		// encoder reset the stream per row but not its diff trackers,
-		// lossiness baked into old files.
-		const d1 = decodeAns(makeAnsi({ columns: 80, rows: 25, seed: 55 }));
-		const legacy = encodeAns(d1.doc, { utf8: true });
-		const d2 = decodeAns(legacy, { utf8: true });
-		expect(d2.doc.getRows()).toBe(d1.doc.getRows());
-		const chars = (u16: Uint16Array) => Array.from(u16, word => word >> 8);
-		expect(chars(v3ToU16(d2.doc).imageData)).toEqual(
-			chars(v3ToU16(d1.doc).imageData),
+	it('full-width UTF-8 rows plus LF read as one row each', () => {
+		// the v2 UTF-8 writer's shape: full-width rows, each closed by
+		// ESC[0m + LF, no SAUCE
+		const shades = ['░', '▒', '▓'];
+		const text = shades
+			.map((shade, y) => `\u001b[0;3${y + 1}m${shade.repeat(80)}\u001b[0m\n`)
+			.join('');
+		const { doc } = decodeAns(new TextEncoder().encode(`\u001b[0m${text}`), {
+			utf8: true,
+		});
+		expect(doc.getRows()).toBe(3);
+		expect(Array.from(v3ToU16(doc).imageData, word => word >> 8)).toEqual(
+			[176, 177, 178].flatMap(code => Array(80).fill(code)),
 		);
 	});
 
@@ -422,7 +714,6 @@ describe('ans codec', () => {
 		const { doc } = decodeAns(bytes, { utf8: true });
 		expect(doc.frames[0].fg[0]).toBe(paletteColor(196));
 		expect(doc.frames[0].bg[0]).toBe(paletteColor(232));
-		// ...and they round-trip losslessly through the writer
 		const again = decodeAns(encodeUtf8(doc), { utf8: true });
 		expect(again.doc.frames[0].fg[0]).toBe(paletteColor(196));
 		expect(again.doc.frames[0].bg[0]).toBe(paletteColor(232));
@@ -443,8 +734,38 @@ describe('ans codec', () => {
 
 	it('plain-text export strips escape codes', () => {
 		const d1 = decodeAns(makeAnsi({ columns: 20, rows: 3, seed: 5 }));
-		const text = encodeAns(d1.doc, { utf8: true, stripEscapeCodes: true });
+		const text = encodeUtf8(d1.doc, { plain: true });
 		expect(Array.from(text)).not.toContain(27);
+	});
+
+	it('CP437 writer swaps stream controls for lookalike glyphs', () => {
+		const doc = createDocV3({ columns: 4, rows: 1 });
+		[10, 13, 26, 27].forEach((code, x) => {
+			doc.setCell(0, x, 0, {
+				glyph: glyphWord(code, 0),
+				fg: paletteColor(7),
+				bg: paletteColor(0),
+			});
+		});
+		const back = decodeAns(encodeAns(doc, { date: FIXED_DATE }));
+		expect(
+			Array.from(v3ToU16(back.doc).imageData.subarray(0, 4), w => w >> 8),
+		).toEqual([9, 14, 16, 17]);
+	});
+
+	it('decodes an empty stream to one blank row', () => {
+		const { doc } = decodeAns(new Uint8Array(0));
+		expect([doc.getColumns(), doc.getRows()]).toEqual([80, 1]);
+		expect(v3ToU16(doc).imageData.every(word => word === 0)).toBe(true);
+		const utf8 = decodeAns(new Uint8Array(0), { utf8: true }).doc;
+		expect([utf8.getColumns(), utf8.getRows()]).toEqual([80, 1]);
+	});
+
+	it('reads a BinaryText FileType 1 record on an ANSI as 80 columns', () => {
+		const body = Uint8Array.of(0x41);
+		const record = makeSauce({ datatype: 5, filetype: 1, fileSize: 1 });
+		const d = decodeAns(concatBytes([body, Uint8Array.of(0x1a), record]));
+		expect(d.doc.getColumns()).toBe(80);
 	});
 });
 

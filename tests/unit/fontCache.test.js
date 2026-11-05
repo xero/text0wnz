@@ -41,7 +41,6 @@ describe('FontCache Module', () => {
 		mockFetch = vi.fn();
 		globalThis.fetch = mockFetch;
 
-		// Clear console methods to reduce noise
 		vi.spyOn(console, 'log').mockImplementation(() => {});
 		vi.spyOn(console, 'warn').mockImplementation(() => {});
 		vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -97,7 +96,6 @@ describe('FontCache Module', () => {
 
 			FontCache.preloadCommonFonts();
 
-			// Wait for async operations
 			await new Promise(resolve => setTimeout(resolve, 10));
 
 			expect(mockFetch).toHaveBeenCalledWith('/ui/fonts/CP437 8x16.png');
@@ -114,7 +112,6 @@ describe('FontCache Module', () => {
 
 			FontCache.preloadCommonFonts();
 
-			// Wait for async operations
 			await new Promise(resolve => setTimeout(resolve, 10));
 
 			expect(console.warn).toHaveBeenCalled();
@@ -217,36 +214,6 @@ describe('FontCache Module', () => {
 
 			expect(console.warn).toHaveBeenCalled();
 			expect(result).toBe(mockResponse);
-		});
-	});
-
-	describe('clearCache', () => {
-		it('should clear Cache API', async () => {
-			await FontCache.clearCache();
-
-			expect(globalThis.caches.delete).toHaveBeenCalledWith('text0wnz-fonts-dev');
-		});
-
-		it('should handle Cache API delete errors', async () => {
-			globalThis.caches.delete.mockRejectedValue(new Error('Delete error'));
-
-			await FontCache.clearCache();
-
-			expect(console.error).toHaveBeenCalled();
-		});
-
-		it('should clear memory cache when Cache API is not available', async () => {
-			const tempCaches = globalThis.caches;
-			delete globalThis.caches;
-
-			FontCache.memoryCache.set('TestFont', new Blob(['data']));
-			expect(FontCache.memoryCache.size).toBe(1);
-
-			await FontCache.clearCache();
-
-			expect(FontCache.memoryCache.size).toBe(0);
-
-			globalThis.caches = tempCaches;
 		});
 	});
 

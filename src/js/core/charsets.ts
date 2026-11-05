@@ -1,16 +1,9 @@
 /**
- * Charset tables (durdraw model): pages of 12 characters
- * that ride the F-key bar and cycle with ctrl+[/]. A page entry is a
- * TOKEN sharing paste.ts semantics: 0-255 is a CP437 charCode drawn
- * from the active classic font, a negative value is ~codepoint and
- * renders/draws through the hex fonts and the doc glyph table.
- *
- * Imports accepted:
- * - durdraw .ini (example-charset.ini lineage): a [Character Set]
- *   section with name:, then [block N] sections with f1:..f12:
- *   holding literal UTF-8 characters (durdraw itself stops at f10).
- * - teXt0wnz .json: { "name": "...", "pages": [["░","▒",...], ...] }
- *   with up to 12 literal characters per page.
+ * Charset tables (durdraw model): pages of 12 characters, one per
+ * F-key. A page entry is a TOKEN sharing paste.ts semantics: 0-255 is
+ * a CP437 charCode drawn from the active classic font, a negative
+ * value is ~codepoint and renders/draws through the hex fonts and the
+ * doc glyph table.
  *
  * Characters that CP437 can express become plain charCodes (so they
  * ride the artist's chosen font); everything else stays a codepoint
@@ -29,7 +22,6 @@ export interface CharsetPage {
 
 export class CharsetError extends Error {}
 
-/** first codepoint of a literal character -> token */
 export const tokenForChar = (char: string): number => {
 	const codepoint = char.codePointAt(0);
 	if (codepoint === undefined) {
@@ -47,7 +39,6 @@ const padPage = (tokens: number[]): number[] => {
 	return page;
 };
 
-/** build one labeled page from a literal string of characters */
 export const pageFromString = (label: string, chars: string): CharsetPage => {
 	const tokens: number[] = [];
 	for (const char of chars) {
@@ -56,7 +47,6 @@ export const pageFromString = (label: string, chars: string): CharsetPage => {
 	return { label, chars: padPage(tokens) };
 };
 
-/** chunk a codepoint range (e.g. a Unicode block) into labeled pages */
 export const pagesForRange = (
 	label: string,
 	first: number,
@@ -80,7 +70,10 @@ export const pagesForRange = (
 	return pages;
 };
 
-/** durdraw-lineage .ini: [Character Set] name + [block N] f1..f12 */
+/**
+ * durdraw-lineage .ini: [Character Set] name + [block N] f1..f12 of
+ * literal UTF-8 characters (durdraw itself stops at f10)
+ */
 export const parseCharsetIni = (text: string): CharsetPage[] => {
 	let name = 'Custom';
 	/** section -> fkey slot -> char */
@@ -175,7 +168,7 @@ export const parseCharsetJson = (text: string): CharsetPage[] => {
 	});
 };
 
-/** sniff .ini vs .json by content and parse accordingly */
+/** sniffed by content, not extension */
 export const parseCharset = (text: string): CharsetPage[] => {
 	const trimmed = text.trimStart();
 	return trimmed.startsWith('{')

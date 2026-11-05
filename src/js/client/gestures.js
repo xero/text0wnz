@@ -1,21 +1,8 @@
 // @ts-check
 /**
- * Touch gesture recognizer. Pure state machine: the
- * pointer normalizer feeds it touch pointers only (mouse and pen skip
- * it entirely) and it decides between a draw stroke and the gestures:
- *
- * - one finger: a stroke, after a short disambiguation hold. The hold
- *   ends early when the finger moves past slop (stroke starts at the
- *   ORIGINAL down point so no ink is lost) or lifts (a tap paints one
- *   point). A second finger landing inside the hold means it was
- *   never a stroke: nothing paints.
- * - two fingers, both lift within tapWindowMs with travel under
- *   slopPx: undo.
- * - two fingers traveling past slop: pinch-zoom/pan at the centroid
- *   until a finger lifts.
- * - three or more fingers, clean tap: redo.
- * - a finger joining mid-stroke ends the stroke (already-drawn cells
- *   stay) and opens gesture tracking.
+ * Touch gesture recognizer, a pure state machine fed touch pointers
+ * only (mouse and pen skip it). One finger strokes only after a short
+ * hold, so a gesture whose second finger lands inside it never paints.
  *
  * After a gesture, remaining fingers are inert until everything lifts;
  * nothing paints on the tail of a half-finished gesture. pointercancel
@@ -24,8 +11,8 @@
  * machine, and capture-fed events mean fingers may wander anywhere on
  * screen.
  *
- * Timing and the scheduler are injectable for tests; defaults are the
- * DOM clock. Tunables ride magicNumbers so device tuning is one file.
+ * Timing and the scheduler are injectable for tests. Tunables ride
+ * magicNumbers so device tuning is one file.
  */
 
 import magicNumbers from './magicNumbers.js';
@@ -80,7 +67,6 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 	 * @property {number} startY
 	 * @property {number} lastX
 	 * @property {number} lastY
-	 * @property {boolean} cancelled
 	 */
 
 	/** @type {Map<number, TrackedPointer>} */
@@ -152,19 +138,6 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 		tapEligible = true;
 	};
 
-	// external reset (dispose paths): an in-flight stroke or pinch must
-	// end observably, or consumers (the zoom controller's interactive
-	// flag, tools awaiting Up) wedge
-	const reset = () => {
-		if (state === 'stroke') {
-			callbacks.onStrokeEnd?.();
-		}
-		if (pinching) {
-			callbacks.onPinchEnd?.();
-		}
-		clearAll();
-	};
-
 	/** @param {GesturePoint} pt */
 	const beginStroke = pt => {
 		state = 'stroke';
@@ -190,7 +163,6 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 			startY: clientY,
 			lastX: clientX,
 			lastY: clientY,
-			cancelled: false,
 		});
 		maxCount = Math.max(maxCount, pointers.size);
 		if (state === 'idle') {
@@ -217,9 +189,8 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 			// second finger inside the hold: it was never a stroke
 			enterGesture();
 		} else if (state === 'stroke') {
-			// finger joined mid-stroke: end the stroke (drawn cells stay),
-			// open a gesture, and disqualify taps so a straggly 2-finger
-			// tap can't undo the dot the stroke just painted
+			// drawn cells stay, and no tap fires: a straggly 2-finger tap
+			// would undo the dot the stroke just painted
 			callbacks.onStrokeEnd?.();
 			enterGesture();
 			tapEligible = false;
@@ -341,6 +312,5 @@ export const createGestureRecognizer = (callbacks, options = {}) => {
 			pinching,
 			maxTravel,
 		}),
-		reset,
 	};
 };

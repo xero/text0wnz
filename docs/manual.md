@@ -136,10 +136,10 @@ File operations allowing you to create, open, and save artwork in multiple file 
 
 **Auto Save/Restore:**
 
-- Every committed stroke appends to an autosave journal in your browser's private origin storage (OPFS)
+- Every stroke appends to an autosave journal in your browser's private origin storage (OPFS) as soon as you pause
 - Larger changes like resizes, file opens, and undo/redo write fresh journal keyframes
 - After a crash, a closed tab, or a reload, the journal replays and your session restores where you left off
-- Browsers without OPFS keep the same journal as an IndexedDB record log; private windows that block both lose autosave for that tab only
+- Browsers that lack OPFS or refuse it, as Firefox private windows do, keep the same journal as an IndexedDB record log; private windows that block both lose autosave for that tab only
 - Lightweight settings (theme, zoom, favorites, recent colors) persist in local storage
 - Collaboration sessions never journal; the server owns that document
 
@@ -272,11 +272,11 @@ System paste reads the OS clipboard as plain text and refuses content wider than
 **Features:**
 
 - Search blocks by name and preview which glyphs the bundled fonts cover
-- Click a glyph to insert it at the cursor
+- Click a glyph to insert it at the cursor. A character CP437 has inserts as its CP437 code and draws from the active font, like an imported page
 - **Import charset** takes a durdraw `.ini` (a `[Character Set]` section with `name:`, then `[block N]` sections holding `f1:` to `f12:`) or a teXt0wnz `.json` (`{ "name": "...", "pages": [["░", "▒", ...], ...] }`). Pages hold 12 characters, and the format is sniffed from the content, not the extension
 - Imported pages ride the F-key bar and persist between sessions. Characters CP437 can express draw from the active font; the rest stay unicode
 
-Unicode glyphs render from [unscii-16](http://viznut.fi/unscii/) (purpose-built for textmode art) with [GNU Unifont](https://unifoundry.com/unifont/) covering the rest. A glyph neither font covers renders as a hollow box and inserts as `?`.
+Unicode glyphs render from [unscii-16](http://viznut.fi/unscii/) (purpose-built for textmode art) with [GNU Unifont](https://unifoundry.com/unifont/) covering the rest. A glyph neither font covers renders as a hollow box and inserts as `?`. A glyph whose font block has not loaded within 10 seconds of typing it also inserts as `?`.
 
 > [!NOTE]
 > On a classic collaboration server the wire only speaks CP437, so unicode input locks while connected. The picker says so when it applies.
@@ -292,7 +292,7 @@ The **Sauce** module at the top of the sidebar shows the current title and bylin
 **Fields:**
 
 - **Title** holds 35 characters, **Author** and **Group** 20 each
-- **Comments** shows a live byte counter out of 16320; lines wrap into 64-byte slots, 255 slots at most
+- **Comments** shows a live byte counter out of 16320. Each line fills one or more 64-byte slots, 255 at most, so a blank or short line still costs 64 bytes, and the box stops taking text once the slots run out. Blank lines and leading spaces save as written. Press `shift enter` for a new line, since `enter` in any field saves
 - **Save** writes the record and **Cancel** discards your edits
 
 Text fields save as CP437 bytes, the way the spec defines them, so characters outside CP437 land as `?`. The `.0wnz` and `.dur` formats carry the title and author in their own JSON instead of a SAUCE record.
@@ -317,7 +317,7 @@ Every sidebar module (Sauce, Canvas, Cursor, Zoom, Reference Image, Minimap, Fra
 **Moving panels:**
 
 - Drag a title strip to move the panel. Drop it on the sidebar to dock it there, near the top or bottom edge of the canvas to dock it in the top or bottom bar, or anywhere else to float it. Dragging within a dock reorders it
-- Right-click a title strip, press `shift F10` on it, or hold a finger on it for half a second to open the panel menu: **Dock Right**, **Dock Top**, **Dock Bottom**, **Float**, **Move Up**, and **Move Down**
+- Right-click a title strip, press `shift F10` on it, or hold a finger or a pen on it for half a second to open the panel menu: **Dock Right**, **Dock Top**, **Dock Bottom**, **Float**, **Move Up**, and **Move Down**
 - The **Shade** button at the right end of a title strip folds the panel to its strip. Clicking a docked strip, or double-clicking a floating one, shades it too
 - In the top and bottom bars, dropping a panel beside another puts the two side by side on screens 768 px and wider
 - The grip on the sidebar's edge hides the whole sidebar and brings it back
@@ -380,8 +380,8 @@ The color system anchors on the classic 16-color ANSI palette, with optional iCE
 
 - 16-color ANSI palette (8 standard + 8 bright colors)
 - Real-time color preview
-- Click a swatch to set the foreground color
-- Double click a swatch to edit that palette entry with the system color picker
+- Click a swatch to set the foreground color, and `ctrl` click or right-click it for the background. On a touch screen, tap a swatch for the foreground and hold a finger or a pen on it for half a second for the background. Every color swatch works this way on every OS
+- Double click or double tap a swatch to edit that palette entry with the system color picker
 - `ctrl` + `0`-`7` sets the foreground, `alt` + `0`-`7` the background; press the same key again for the bright variant
 - `ctrl` + `up`/`down` cycles the foreground color, `ctrl` + `left`/`right` the background
 
@@ -401,9 +401,9 @@ The `++` button under the palette strip opens the extended color panel, one clic
 
 **Features:**
 
-- **xterm 256 grid** - Click a swatch for the foreground, right-click for the background
+- **xterm 256 grid** - Click a swatch for the foreground; `ctrl` click, right-click, or hold a finger or a pen on it for the background
 - **RGB** - Pick any truecolor value with the hex color input, then apply it with the `fg` or `bg` buttons
-- **Recent** - Your last ten extended picks, remembered between sessions
+- **Recent** - Your last ten extended picks, remembered between sessions. Its swatches pick like the grid's
 - The panel is a flyout beside the `++` button. Press `++` again, click anywhere outside it, or press `escape` to close it
 
 Formats that cannot hold extended colors list what will be quantized or dropped at export time.
@@ -473,6 +473,8 @@ Full text input with navigation controls. Type characters directly onto the canv
 | `backspace`            | Erase the cell to the left                  |
 | `enter`                | New line                                    |
 
+With a button, slider, or other control reached by `tab`, `enter`, `space`, and the arrow keys work it, in keyboard mode and with the selection tool. After a mouse click on a control they stay canvas keys, and text fields like the frame delay keep every key. A tap on the canvas hands it these keys back. A button you clicked keeps leaving these keys to the canvas when a dialog or menu closing hands focus back to it. A slider reached by `tab` also keeps `home`, `end`, `page up`, and `page down`.
+
 ## Screen-Aware Navigation
 
 `Page Up` and `Page Down` automatically calculate movement based on the current viewport height and font size, allowing you to navigate large canvases one screen at a time without losing your bearings.
@@ -538,6 +540,7 @@ Draw with shading blocks (`░▒▓`). 'Reduce mode' when holding Shift. Ideal 
 - Reduce mode with Shift key
 - A pressure-sensitive pen picks its shade from pressure directly; press lighter or harder to shade
 - The gradient picker follows the active foreground color
+- Click a block in the gradient picker to pick its shade and foreground color, and `ctrl` click, right-click, or hold a finger or a pen on it to set only the background color
 
 ### ASCII Brush
 
@@ -657,7 +660,9 @@ Draw rectangles, circles, and ellipses. Each tool's Mode pills and its Outline/F
 Select rectangular canvas areas for manipulation, copying, or transformation. A floating action bar sits over the selection with its size readout.
 
 > [!NOTE]
-> A single click selects one cell; drag to grow the selection. Press `escape` or **Deselect** to clear it.
+> A single click selects one cell; drag to grow the selection. Press `escape` or **Deselect** to clear it. The keyboard cursor moves to where the selection was.
+>
+> Picking the tool brings back your last selection, unless you cleared it. With none to bring back, it opens with nothing selected. While nothing is selected, a shortcut below that acts on a selection first selects the cell under the keyboard cursor, so `ctrl v` right after you pick the tool pastes where you were typing.
 
 **Action Bar:**
 
@@ -668,7 +673,7 @@ A bar floats above the selection (below it when there is no headroom) and follow
 - **Move** toggles move mode (`m`)
 - **Cut**, **Delete**, and **Copy** act on the contents
 - **Paste** opens a submenu: **Paste**, **Transparent**, **Under**, **System**, and **Back**
-- **Deselect** clears the selection (`escape`)
+- **Deselect** clears the selection (`escape`) and parks the keyboard cursor at its top left corner
 
 **Selection Modes:**
 
@@ -681,6 +686,8 @@ Move mode is orange (toggle with `m` key):
 ![move](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/move.png)
 
 Blank cells in the selection move transparently, like paste transparent: artwork under the empty parts of the rect shows through and survives the move. A cell counts as blank when it is empty (char 0, space, or nbsp) on a black background, the same rule the paste modes use.
+
+`[` and `]` during a move flip the moving block, and the flip is part of the move's one undo step.
 
 **Keyboard Shortcuts:**
 
@@ -753,6 +760,7 @@ Full undo/redo support for all drawing operations.
 - Works with all tools and operations
 - The History flyout lists every step with a label and its age; click a step to jump there, backwards or forwards. Consecutive typing within 2.5 seconds groups as one step
 - On phones the top strip carries undo and redo buttons
+- A canvas resize is one undo step that brings back the old size and every cell the resize cut off. Opening a file, starting a new document, deleting a frame, or a collaborator's resize starts a fresh history
 - Your artwork survives reloads through the autosave journal; the undo stack itself starts fresh each session
 
 **Supported Operations:**
@@ -1009,6 +1017,7 @@ The editor treats mouse, pen, and touch as first-class input.
 - **One finger** draws with the active tool; a tap paints one cell
 - **Two-finger tap** undoes (it also works on the viewport margins around the canvas)
 - **Three-finger tap** redoes
+- **Hold** a finger or a pen on any color swatch for half a second to set the background color; a tap sets the foreground, and a press that slides into a scroll picks nothing
 - **Two-finger pinch** zooms at the pinch center; dragging both fingers pans the canvas
 
 **Pen:**
@@ -1069,6 +1078,8 @@ To join a server anywhere else, click the collab button in the sauce panel; it r
 A refusal or a dead server reports in the form. Vanilla Moebius servers are plaintext, so from an https page the editor goes through the site's bridge when the host allows it, and says so when it does not; see [collab-protocol-migration.md](./collab-protocol-migration.md). The launch invitation names the server a link chose for you.
 
 - Everyone in a session draws on the same canvas in real time, with live peer cursors, synced fonts, canvas sizes, iCE colors, and SAUCE metadata
+- A collaborator's SAUCE edit waits while your Sauce Editor is open: **Save** sends yours over it, and **Cancel** shows theirs
+- Leaving a session keeps what is on screen as your local document and autosave, titled `Untitled` when the room had no title
 - Between teXt0wnz clients, unicode characters and extended colors travel natively
 - Classic Moebius clients can join the same session; the server down-converts extended cells to their nearest 16-color CP437 equivalents for them, so mixed rooms stay coherent
 - Connected to a classic server, the editor locks what that wire cannot carry: extended colors, unicode input, and animation editing disable while connected, and each panel says so
@@ -1211,7 +1222,8 @@ These single keys work in every tool except Keyboard Mode and the Selection Tool
 - **click & drag:** Draw/Shape or select region
 - **shift click:** Straight line from the last point (Colorize brush only)
 - **alt click:** Sample colors (any tool)
-- **right click:** Set the background color in the xterm 256 flyout; on the 16-color strip a right click sets the foreground like a left click, and on the canvas the browser context menu is suppressed
+- **right click:** Set the background color from any color swatch (the 16-color strip, the xterm 256 grid, the recent colors, or the shading gradient picker); on the canvas the browser context menu is suppressed
+- **ctrl click:** Set the background color from any color swatch, exactly like a right click, on every OS
 
 ## Related Documentation
 

@@ -1,9 +1,11 @@
 /**
- * The v3 editing engine core: v2 canvas.js's document mutations (draw
- * entry points, half-block painting, mirror mode, bright-bg optimize,
- * areas, undo groups) reproduced verbatim over the three-plane doc and
- * the patch arena. Pure TS: rendering, collab packets, and persistence
- * stay in the client, wired through the onWrite observer.
+ * The v3 editing engine core: v2's document mutations (draw entry
+ * points, half-block painting, mirror mode, bright-bg optimize, areas,
+ * undo groups) reproduced verbatim over the three-plane doc and the
+ * patch arena, pinned word-for-word against
+ * tests/parity/v2ReferenceEngine.js. Pure TS: rendering, collab
+ * packets, and persistence stay in the client, wired through the
+ * onWrite observer.
  *
  * Scope: classic16 editing (palette indices 0-15, CP437 glyphs). Cells
  * holding raw-RGB colors or unicode glyphs (tnd/dur/envelope loads)
@@ -14,7 +16,8 @@
  * blink at render time via the ice flag. v3 bakes the interpretation
  * into the planes (attr bit 0 + dim bg) per the u16<->v3 round-trip law,
  * so writes fold by the doc's current flag and setIceColors REWRITES the
- * planes. toU16() output stays word-identical with v2 across toggles.
+ * planes. The u16 projection stays word-identical with v2 across
+ * toggles.
  */
 
 import {
@@ -31,7 +34,7 @@ import {
 	paletteIndexOf,
 	RGB_EDIT_TAG,
 } from './doc.js';
-import { U16Doc, quantizeColorWord, v3ToU16, v3ToU16Lossy } from './convert.js';
+import { U16Doc, quantizeColorWord, v3ToU16Lossy } from './convert.js';
 import { unicodeToCp437Strict } from './cp437.js';
 import {
 	EditCell,
@@ -42,7 +45,12 @@ import {
 	overlayHalfBlock,
 } from './cellops.js';
 import { cellInRange } from './mapping.js';
-import { PatchArena, createPatchArena } from './patchArena.js';
+import {
+	PatchArena,
+	PlaneWrite,
+	StrokeMeta,
+	createPatchArena,
+} from './patchArena.js';
 
 /** One applied cell write, in both v3 and u16 terms. */
 export interface EditorWrite {
@@ -64,8 +72,7 @@ export interface EditorCoreOptions {
 	onWrite?: (write: EditorWrite) => void;
 	/**
 	 * Fires when the edited frame changes: explicit navigation, or an
-	 * undo/redo landing on a stroke recorded in another frame. The
-	 * client re-mirrors and repaints wholesale on this.
+	 * undo/redo landing on a stroke recorded in another frame.
 	 */
 	onFrameChange?: (frameIndex: number) => void;
 }
@@ -124,14 +131,9 @@ export interface EditorCore {
 		width: number,
 		height: number,
 	) => { data: Uint16Array; width: number; height: number };
-	setAreaU16: (
-		area: { data: Uint16Array; width: number; height: number },
-		x: number,
-		y: number,
-	) => void;
 	/**
-	 * Plane-native area ops for selection move and the clipboard: the
-	 * u16 twins quantize truecolor and degrade unicode to '?', so
+	 * Plane-native area ops for selection move and the clipboard:
+	 * getAreaU16 quantizes truecolor and degrades unicode to '?', so
 	 * anything that rearranges existing art must ride these.
 	 */
 	getAreaCells: (
@@ -170,7 +172,6 @@ export interface EditorCore {
 	getMirrorX: (x: number) => number;
 	/** Rewrites the planes to the new blink interpretation. */
 	setIceColors: (ice: boolean) => void;
-	toU16: () => U16Doc;
 	/** Quantized projection for the fallback renderer/collab mirror. */
 	toU16Lossy: () => U16Doc;
 	/** v2 setImageData: replace content wholesale, clearing history. */
@@ -187,8 +188,17 @@ export interface EditorCore {
 	 * doc object identity is preserved for the renderer bridges.
 	 */
 	loadDoc: (source: DocV3) => void;
-	/** v2 resize semantics: overlap copy, history cleared. */
-	resize: (columns: number, rows: number) => void;
+	/**
+	 * Overlap copy across every frame, as one undo step. A peer's resize
+	 * passes `undoable: false` and clears history instead: remote ops
+	 * never enter the local undo stack, and strokes recorded at the old
+	 * geometry would land at the wrong cells.
+	 */
+	resize: (
+		columns: number,
+		rows: number,
+		options?: { undoable?: boolean },
+	) => void;
 	clear: () => void;
 }
 
@@ -201,8 +211,6 @@ export const createEditorCore = (
 
 	const columns = () => doc.getColumns();
 
-	// ------------------------------------------------------- cell access
-
 	/**
 	 * Cell view for the tools. Colors are classic 0-15 indexes when the
 	 * plane word is one AND the u16 cell model can express it; anything
@@ -213,16 +221,13 @@ export const createEditorCore = (
 	 * a steady bright classic bg without ice has no u16 nibble (bright
 	 * means blink there), so it stays a word and quantizes exactly like
 	 * the v3ToU16Lossy rebuild, keeping the mirror path-independent.
-	 * ATTR_BLINK on an extended bg rides the optional blink flag, so
-	 * packWord blinks the quantized nibble exactly like the
-	 * v3ToU16Lossy rebuild and planeWords stores the attr back on
-	 * write; the flag exists only for non classic bgs (classic bgs
-	 * fold blink into indexes 8-15 as always).
+	 * The blink flag exists only for non-classic bgs (classic bgs fold
+	 * blink into indexes 8-15).
 	 */
 	const readCell = (index: number): EditCell => {
 		const frame = doc.frames[currentFrame];
-		// out of range reads return a blank cell instead of undefined
-		// plane words; wrapped positive indexes are the callers' guard
+		// blank instead of undefined plane words; wrapped in-range
+		// indexes are the callers' guard
 		if (!Number.isInteger(index) || index < 0 || index >= frame.glyph.length) {
 			return { charCode: 0, fg: 0, bg: 0 };
 		}
@@ -302,8 +307,6 @@ export const createEditorCore = (
 		};
 	};
 
-	// --------------------------------------------------- stroke plumbing
-
 	let strokeOpen = false;
 	// the frame every read/write/draw targets; strokes record it, and
 	// undo/redo navigate back to the frame they touch
@@ -311,7 +314,7 @@ export const createEditorCore = (
 
 	const ensureStroke = () => {
 		if (!strokeOpen) {
-			arena.beginStroke({ frame: currentFrame });
+			arena.beginStroke({ frame: currentFrame, ice: doc.getIceColors() });
 			strokeOpen = true;
 		}
 	};
@@ -361,8 +364,6 @@ export const createEditorCore = (
 		emit(index, packWord(cell), undoable);
 	};
 
-	// -------------------------------------------------------- operations
-
 	const optimizeBlocks = (blocks: Array<[number, number, number]>) => {
 		for (const [index] of blocks) {
 			const replacement = optimizeCell(readCell(index));
@@ -377,10 +378,9 @@ export const createEditorCore = (
 		const cols = columns();
 		const rowCount = doc.getRows();
 		callback((charCode, foreground, background, x, y) => {
-			// defense in depth (wrap audit): a fractional or out of range
-			// cell would wrap through the index to another row, or no-op
-			// past the planes while still recording undo and echoing to
-			// collab; tools clamp, but no future tool's math may corrupt
+			// tools clamp, but a fractional or out of range cell would wrap
+			// through the index to another row, or no-op past the planes
+			// while still recording undo and echoing to collab
 			if (!cellInRange(x, y, cols, rowCount)) {
 				return;
 			}
@@ -458,8 +458,7 @@ export const createEditorCore = (
 		const attrs = attrsOf(frame.glyph[i]);
 		// the blink<->bright fold is CLASSIC16 semantics only: extended
 		// backgrounds (raw RGB, palette indexes above 15) pass through the
-		// ice toggle untouched, keeping their blink attr as-is (the attr
-		// bit exists everywhere; ice folding is 16-color-only)
+		// ice toggle untouched, keeping their blink attr as-is
 		const classicBg =
 			isPaletteColor(frame.bg[i]) && paletteIndexOf(frame.bg[i]) <= 15;
 		if (!classicBg) {
@@ -489,6 +488,45 @@ export const createEditorCore = (
 				refoldIndex(frame, i, ice);
 			}
 		}
+	};
+
+	const historyStep = (
+		step: (onWrite: PlaneWrite) => StrokeMeta | null,
+	): boolean => {
+		flushStroke();
+		const [cols, rowCount] = [columns(), doc.getRows()];
+		const touched = new Map<number, Set<number>>();
+		const meta = step((_plane, index, _word, frame) => {
+			const set = touched.get(frame) ?? new Set<number>();
+			touched.set(frame, set.add(index));
+		});
+		if (!meta) {
+			return false;
+		}
+		// a stroke from another frame pulls the view there first, so the
+		// refold, the mirror, and the repaint all see that frame; a resize
+		// spans every frame and leaves the view where it is
+		const resized = columns() !== cols || doc.getRows() !== rowCount;
+		if (!resized && meta.frame !== currentFrame) {
+			switchFrame(meta.frame);
+		}
+		// words recorded under the other ice flag restore in its blink
+		// fold; re-express them like v2's flag semantics. Words recorded
+		// under this flag come back verbatim, or a loaded cell that holds
+		// a steady bright bg without ice would turn to blink
+		const ice = doc.getIceColors();
+		const refold = meta.ice !== ice;
+		for (const [frame, indexes] of touched) {
+			for (const index of indexes) {
+				if (refold) {
+					refoldIndex(doc.frames[frame], index, ice);
+				}
+				if (frame === currentFrame) {
+					emit(index, packWord(readCell(index)), true);
+				}
+			}
+		}
+		return true;
 	};
 
 	return {
@@ -542,18 +580,6 @@ export const createEditorCore = (
 			}
 			return { data, width, height };
 		},
-		setAreaU16: (area, x, y) => {
-			const maxWidth = Math.min(area.width, columns() - x);
-			const maxHeight = Math.min(area.height, doc.getRows() - y);
-			drawBlocks(draw => {
-				for (let py = 0; py < maxHeight; py++) {
-					for (let px = 0; px < maxWidth; px++) {
-						const attrib = area.data[py * area.width + px];
-						draw(attrib >> 8, attrib & 15, (attrib >> 4) & 15, x + px, y + py);
-					}
-				}
-			});
-		},
 		getAreaCells: (x, y, width, height) => {
 			const cells: EditCell[] = new Array(width * height);
 			const cols = columns();
@@ -571,9 +597,9 @@ export const createEditorCore = (
 		setAreaCells: (area, x, y) => {
 			const maxWidth = Math.min(area.width, columns() - x);
 			const maxHeight = Math.min(area.height, doc.getRows() - y);
-			// through drawBlocks like the u16 twin: mirror mode and the
-			// wrap guard live there, and extended color words pass through
-			// writeCell untouched
+			// through drawBlocks: mirror mode and the wrap guard live
+			// there, and extended color words pass through writeCell
+			// untouched
 			drawBlocks(draw => {
 				for (let py = 0; py < maxHeight; py++) {
 					for (let px = 0; px < maxWidth; px++) {
@@ -611,9 +637,8 @@ export const createEditorCore = (
 			}
 		},
 		quickDrawExt: cells => {
-			// remote full-fidelity cells (collab extension suite): raw plane
-			// words, no undo, no history; like quickDrawU16, the mirror
-			// stays consistent through the same packWord projection
+			// like quickDrawU16, the mirror stays consistent through the
+			// same packWord projection
 			const frame = doc.frames[currentFrame];
 			for (const { index, glyph, fg, bg } of cells) {
 				if (
@@ -636,53 +661,23 @@ export const createEditorCore = (
 		endUndo: () => {
 			flushStroke();
 		},
-		undo: () => {
-			flushStroke();
-			const touched = new Set<number>();
-			const meta = arena.undo(doc, (_plane, index) => touched.add(index));
-			// a stroke from another frame pulls the view there first, so
-			// the refold, the mirror, and the repaint all see that frame
-			if (meta && meta.frame !== currentFrame) {
-				switchFrame(meta.frame);
-			}
-			for (const index of touched) {
-				// Strokes recorded before an ice toggle restore words in the
-				// old blink fold; re-express them like v2's flag semantics
-				refoldIndex(doc.frames[currentFrame], index, doc.getIceColors());
-				emit(index, packWord(readCell(index)), true);
-			}
-			return meta !== null;
-		},
-		redo: () => {
-			// v2 redo is a FULL no-op on an empty redo buffer: the pending
-			// stroke keeps accumulating (undo flushes it, redo does not)
-			if (!arena.stats().canRedo) {
-				return false;
-			}
-			flushStroke();
-			const touched = new Set<number>();
-			const meta = arena.redo(doc, (_plane, index) => touched.add(index));
-			if (meta && meta.frame !== currentFrame) {
-				switchFrame(meta.frame);
-			}
-			for (const index of touched) {
-				refoldIndex(doc.frames[currentFrame], index, doc.getIceColors());
-				emit(index, packWord(readCell(index)), true);
-			}
-			return meta !== null;
-		},
+		undo: () => historyStep(onWrite => arena.undo(doc, onWrite)),
+		// v2 redo is a FULL no-op on an empty redo buffer: the pending
+		// stroke keeps accumulating (undo flushes it, redo does not)
+		redo: () =>
+			arena.stats().canRedo && historyStep(onWrite => arena.redo(doc, onWrite)),
 		getCurrentFrame: () => currentFrame,
 		/** navigation, never undoable; false = index out of range */
 		setCurrentFrame: index => switchFrame(index),
-		/** append a frame (blank or copied); undo history survives */
+		/** undo history survives */
 		addFrame: addOptions => {
 			flushStroke();
 			return doc.addFrame(addOptions);
 		},
 		/**
 		 * remove a frame; later frames shift down, leaving recorded
-		 * stroke frame indexes stale, so the undo history drops (as on
-		 * resize) and the view lands on the nearest surviving frame
+		 * stroke frame indexes stale, so the undo history drops and the
+		 * view lands on the nearest surviving frame
 		 */
 		removeFrame: index => {
 			flushStroke();
@@ -701,11 +696,12 @@ export const createEditorCore = (
 		getMirrorX: x => mirrorX(columns(), x),
 		setIceColors: ice => {
 			if (doc.getIceColors() !== ice) {
+				// a step's ice flag has to hold for every word it records
+				flushStroke();
 				doc.setIceColors(ice);
 				refoldPlanes(ice);
 			}
 		},
-		toU16: () => v3ToU16(doc),
 		toU16Lossy: () => v3ToU16Lossy(doc),
 		loadDoc: source => {
 			flushStroke();
@@ -730,10 +726,18 @@ export const createEditorCore = (
 				const target = doc.frames[f];
 				target.delayMs = src.delayMs;
 				for (let i = 0; i < src.glyph.length; i++) {
-					const def = source.glyphTable.get(glyphIdOf(src.glyph[i]));
-					const id = def
-						? doc.glyphTable.idFor(def.fontSlot, def.codepoint)
-						: 0;
+					const sourceId = glyphIdOf(src.glyph[i]);
+					const def = source.glyphTable.get(sourceId);
+					const same = doc.glyphTable.get(sourceId);
+					// CP437 0 and 255 both map to NBSP, so a codepoint lookup
+					// alone turns every 255 into the empty NUL cell; an id
+					// that already names the same glyph here stays
+					const id = !def
+						? 0
+						: same?.fontSlot === def.fontSlot &&
+							  same.codepoint === def.codepoint
+							? sourceId
+							: doc.glyphTable.idFor(def.fontSlot, def.codepoint);
 					target.glyph[i] = glyphWord(id, attrsOf(src.glyph[i]));
 					target.fg[i] = src.fg[i];
 					target.bg[i] = src.bg[i];
@@ -765,21 +769,28 @@ export const createEditorCore = (
 				frame.bg[i] = paletteColor(blink ? bgNibble & 7 : bgNibble);
 			}
 		},
-		resize: (newColumns, newRows) => {
+		resize: (newColumns, newRows, { undoable = true } = {}) => {
 			if (
 				(newColumns !== columns() || newRows !== doc.getRows()) &&
 				newColumns > 0 &&
 				newRows > 0
 			) {
+				// the open stroke commits first, at the geometry it was
+				// drawn at
 				flushStroke();
-				arena.clear();
-				doc.resize(newColumns, newRows);
+				if (undoable) {
+					arena.commitResize(doc, newColumns, newRows, {
+						frame: currentFrame,
+					});
+				} else {
+					arena.clear();
+					doc.resize(newColumns, newRows);
+				}
 			}
 		},
 		clear: () => {
 			flushStroke();
 			arena.clear();
-			// New-document semantics: back to a single blank frame
 			currentFrame = 0;
 			while (doc.frames.length > 1) {
 				doc.removeFrame(doc.frames.length - 1);

@@ -1,14 +1,13 @@
 /**
- * Minimal ZIP reader for the 16colo.rs in-app browser: enough to open
- * one piece out of a scene pack zip fetched from the archive mirror.
- * Central-directory driven, store (0) and deflate (8) methods only,
- * inflated through the runtime-native
- * DecompressionStream('deflate-raw') like the other codecs; no
+ * Minimal ZIP reader for the 16colo.rs and aSCIIaRENA browsers and
+ * native opens: enough to open one piece out of a scene pack.
+ * Central-directory driven, store (0) and deflate (8) only, inflated
+ * through the runtime-native DecompressionStream('deflate-raw'); no
  * dependency, no zip64, no encryption (scene packs are small flat
  * archives; anything else throws a CodecError).
  */
 
-import { CodecError, inflateRaw } from './util.js';
+import { CodecError, crc32, inflateRaw } from './util.js';
 
 const EOCD_SIG = 0x06054b50;
 const CENTRAL_SIG = 0x02014b50;
@@ -34,30 +33,15 @@ export interface ZipEntry {
 	crc32: number;
 }
 
-// standard table-less CRC-32 (reflected, poly 0xEDB88320), the same
-// check lha.ts runs as CRC-16: bit-rotted packs fail loud instead of
-// opening as mojibake
-const crc32Of = (bytes: Uint8Array): number => {
-	let crc = 0xffffffff;
-	for (let i = 0; i < bytes.length; i++) {
-		crc ^= bytes[i];
-		for (let b = 0; b < 8; b++) {
-			crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
-		}
-	}
-	return (crc ^ 0xffffffff) >>> 0;
-};
-
 const decodeName = (bytes: Uint8Array, flags: number): string =>
 	// bit 11 = UTF-8 name; everything else in old packs is cp437-ish,
 	// where latin1 keeps the bytes readable enough for matching.
-	// DOS-era packers wrote backslash separators, which defeated
-	// basename matching (lha.ts converts them; PabloDraw trims both)
+	// DOS-era packers write backslash separators, which defeat basename
+	// matching (lha.ts converts them too; PabloDraw trims both)
 	new TextDecoder(flags & 0x800 ? 'utf-8' : 'latin1')
 		.decode(bytes)
 		.replaceAll('\\', '/');
 
-/** parse the central directory into an entry list */
 export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	// EOCD: scan backward over the (max 64KB) trailing comment
@@ -75,8 +59,8 @@ export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
 	const count = view.getUint16(eocd + 10, true);
 	const cdSize = view.getUint32(eocd + 12, true);
 	let offset = view.getUint32(eocd + 16, true);
-	// saturated EOCD fields mean zip64; reading them as real values
-	// silently truncated the listing to 65535 entries
+	// saturated EOCD fields mean zip64; read as real values they
+	// silently truncate the listing to 65535 entries
 	if (count === 0xffff || offset === 0xffffffff || cdSize === 0xffffffff) {
 		throw new CodecError('zip64 archives are not supported');
 	}
@@ -99,7 +83,7 @@ export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
 		}
 		const flags = view.getUint16(offset + 8, true);
 		const method = view.getUint16(offset + 10, true);
-		const crc32 = view.getUint32(offset + 16, true);
+		const crc = view.getUint32(offset + 16, true);
 		const compressedSize = view.getUint32(offset + 20, true);
 		const size = view.getUint32(offset + 24, true);
 		const nameLength = view.getUint16(offset + 28, true);
@@ -123,23 +107,21 @@ export const readZipEntries = (bytes: Uint8Array): ZipEntry[] => {
 			size,
 			headerOffset: headerOffset + displacement,
 			encrypted: (flags & 0x01) !== 0,
-			crc32,
+			crc32: crc,
 		});
 		offset += 46 + nameLength + extraLength + commentLength;
 	}
 	return entries;
 };
 
-/** extract one entry's bytes (store or deflate) */
 export const extractZipEntry = async (
 	bytes: Uint8Array,
 	entry: ZipEntry,
 ): Promise<Uint8Array> => {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	if (entry.encrypted) {
-		// flag bit 0 was read but never tested: stored entries returned
-		// ciphertext as content and deflated ones died as a raw stream
-		// TypeError against the module's own throw-CodecError contract
+		// otherwise stored entries return ciphertext as content and
+		// deflated ones die as a raw stream TypeError, not a CodecError
 		throw new CodecError(`zip entry ${entry.name} is encrypted`);
 	}
 	if (
@@ -163,8 +145,10 @@ export const extractZipEntry = async (
 		throw new CodecError(`zip data truncated for ${entry.name}`);
 	}
 	const data = bytes.subarray(start, end);
+	// the same check lha.ts runs as CRC-16: bit-rotted packs fail loud
+	// instead of opening as mojibake
 	const verified = (out: Uint8Array): Uint8Array => {
-		if (crc32Of(out) !== entry.crc32) {
+		if (crc32(out) !== entry.crc32) {
 			throw new CodecError(`zip entry ${entry.name} failed its CRC-32`);
 		}
 		return out;

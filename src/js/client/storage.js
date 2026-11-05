@@ -1,10 +1,4 @@
 // @ts-check
-/**
- * Optimized storage system using IndexedDB for binary data and
- * localStorage for small configuration
- */
-
-// IndexedDB setup
 /** @type {Promise<IDBDatabase> | null} */
 let sharedDb = null;
 
@@ -24,6 +18,8 @@ const openDb = () => {
 				db.createObjectStore('fontData');
 			}
 
+			// nothing writes undoHistory; it keeps what a v2 install left
+			// until clearAll empties it
 			if (!db.objectStoreNames.contains('undoHistory')) {
 				db.createObjectStore('undoHistory');
 			}
@@ -57,8 +53,8 @@ const openDb = () => {
 };
 
 /**
- * One shared connection for every op: the old per-call open never
- * closed its connection, leaking one handle per storage call.
+ * One shared connection for every op: a per-call open leaks one
+ * handle per storage call.
  * @returns {Promise<IDBDatabase>}
  */
 const dbPromise = () => {
@@ -71,19 +67,15 @@ const dbPromise = () => {
 	return sharedDb;
 };
 
-// Storage API
 export const Storage = {
-	/**
-	 * Save canvas state to IndexedDB
-	 * @param {unknown} data canvas snapshot (Uint16Array plus metadata)
-	 */
+	/** @param {unknown} data canvas snapshot (Uint16Array plus metadata) */
 	async saveCanvasData(data) {
 		try {
 			const db = await dbPromise();
 			const tx = db.transaction('canvasData', 'readwrite');
 			const store = tx.objectStore('canvasData');
 
-			// Store canvas data directly as Uint16Array - more efficient than conversion
+			// structured clone stores the Uint16Array as is, no conversion
 			await /** @type {Promise<void>} */(new Promise((resolve, reject) => {
 				const request = store.put(data, 'currentCanvas');
 				request.onsuccess = () => resolve();
@@ -97,9 +89,6 @@ export const Storage = {
 		}
 	},
 
-	/**
-	 * Load canvas state from IndexedDB
-	 */
 	async loadCanvasData() {
 		try {
 			const db = await dbPromise();
@@ -118,7 +107,6 @@ export const Storage = {
 	},
 
 	/**
-	 * Save font data to IndexedDB
 	 * @param {string} fontName
 	 * @param {unknown} fontData
 	 */
@@ -141,10 +129,7 @@ export const Storage = {
 		}
 	},
 
-	/**
-	 * Load font data from IndexedDB
-	 * @param {string} fontName
-	 */
+	/** @param {string} fontName */
 	async loadFontData(fontName) {
 		try {
 			const db = await dbPromise();
@@ -163,51 +148,8 @@ export const Storage = {
 	},
 
 	/**
-	 * Save undo history to IndexedDB
-	 * @param {unknown} undoHistory
-	 */
-	async saveUndoHistory(undoHistory) {
-		try {
-			const db = await dbPromise();
-			const tx = db.transaction('undoHistory', 'readwrite');
-			const store = tx.objectStore('undoHistory');
-
-			await /** @type {Promise<void>} */(new Promise((resolve, reject) => {
-				const request = store.put(undoHistory, 'currentUndoHistory');
-				request.onsuccess = () => resolve();
-				request.onerror = () => reject(request.error);
-			}));
-
-			return true;
-		} catch (error) {
-			console.error('[Storage] Error saving undo history:', error);
-			return false;
-		}
-	},
-
-	/**
-	 * Load undo history from IndexedDB
-	 */
-	async loadUndoHistory() {
-		try {
-			const db = await dbPromise();
-			const tx = db.transaction('undoHistory', 'readonly');
-			const store = tx.objectStore('undoHistory');
-
-			return await new Promise((resolve, reject) => {
-				const request = store.get('currentUndoHistory');
-				request.onsuccess = () => resolve(request.result);
-				request.onerror = () => reject(request.error);
-			});
-		} catch (error) {
-			console.error('[Storage] Error loading undo history:', error);
-			return null;
-		}
-	},
-
-	/**
-	 * Save the reference image to IndexedDB. Raw bytes, never a Blob or
-	 * File: Safari drops those in a structured clone.
+	 * Raw bytes, never a Blob or File: Safari drops those in a
+	 * structured clone.
 	 * @param {{buffer: ArrayBuffer, type: string}} image
 	 */
 	async saveRefImage(image) {
@@ -230,7 +172,6 @@ export const Storage = {
 	},
 
 	/**
-	 * Load the reference image from IndexedDB
 	 * @returns the stored record, undefined when nothing is stored, or
 	 * null when the read itself failed (callers treat these differently:
 	 * a failure must not be mistaken for an empty store)
@@ -252,9 +193,6 @@ export const Storage = {
 		}
 	},
 
-	/**
-	 * Drop the stored reference image blob
-	 */
 	async clearRefImage() {
 		try {
 			const db = await dbPromise();
@@ -274,10 +212,7 @@ export const Storage = {
 		}
 	},
 
-	/**
-	 * Save lightweight settings to localStorage
-	 * @param {object} settings
-	 */
+	/** @param {object} settings */
 	saveSettings(settings) {
 		try {
 			localStorage.setItem('text0wnz-settings', JSON.stringify(settings));
@@ -288,9 +223,6 @@ export const Storage = {
 		}
 	},
 
-	/**
-	 * Load lightweight settings from localStorage
-	 */
 	loadSettings() {
 		try {
 			const settings = localStorage.getItem('text0wnz-settings');
@@ -302,8 +234,15 @@ export const Storage = {
 	},
 
 	/**
-	 * Clear all storage
+	 * saveSettings replaces the whole record; this keeps every stored
+	 * field the patch does not name
+	 * @param {object} patch
+	 * @returns {boolean}
 	 */
+	mergeSettings(patch) {
+		return Storage.saveSettings({ ...Storage.loadSettings(), ...patch });
+	},
+
 	async clearAll() {
 		localStorage.removeItem('text0wnz-settings');
 		localStorage.removeItem('refImage');

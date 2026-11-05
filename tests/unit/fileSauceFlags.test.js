@@ -1,11 +1,8 @@
 /**
- * SAUCE flags round trip through the live Load/Save surface: the AR
- * bits and an LS no-preference survive an untouched resave, an artist
- * touch writes the explicit bit, and File New forgets the stash. Runs
- * under real jsdom so the file.js onLetterSpacingChange listener is
- * live, unlike the corpus harness whose document stub drops it.
+ * Runs under real jsdom so the file.js onLetterSpacingChange listener
+ * is live, unlike the corpus harness whose document stub drops it.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mocks = vi.hoisted(() => {
 	const ui = {
@@ -45,20 +42,11 @@ import { u16ToV3 } from '../../src/js/core/index';
 import { parseSauce } from '../../src/js/core/codecs/sauce.js';
 import { makeAnsi } from '../corpus/generators.js';
 
-const openFile = (name, bytes) =>
-	new Promise(resolve => {
-		Load.file(new File([bytes], name), (...args) => resolve(args));
-	});
-
-/** open bytes AND point getDoc at the decoded content for the save */
+/** open bytes AND point getDoc at the decoded doc for the save */
 const openAndWire = async (name, bytes) => {
-	const [columns, rows, data, iceColors] = await openFile(name, bytes);
-	const doc = u16ToV3({
-		imageData: data,
-		columns,
-		rows,
-		iceColors: !!iceColors,
-		letterSpacing: false,
+	const doc = await new Promise(resolve => {
+		Load.file(new File([bytes], name), (_letterSpacing, _fontName, opened) =>
+			resolve(opened));
 	});
 	mocks.state.textArtCanvas.getDoc = () => doc;
 };
@@ -88,6 +76,114 @@ const saved = async () => {
 	expect(savedBytes).not.toBeNull();
 	return parseSauce(savedBytes);
 };
+
+describe('SAUCE text lifecycle', () => {
+	it('CP437 text survives an open and resave byte for byte', async () => {
+		const original = makeAnsi({
+			columns: 80,
+			rows: 5,
+			seed: 2,
+			sauce: {
+				tinfo1: 80,
+				tinfo2: 5,
+				title: 'caf\x82 \x9c5',
+				author: '\x8eL',
+				group: 'gr\x81n',
+				comments: ['na\x8bve r\x82sum\x82'],
+			},
+		});
+		await openAndWire('cafe.ans', original);
+		await saved();
+		// SAUCE §Layout: COMNT, one 64-byte line, then the record, whose
+		// Title, Author, and Group run from byte 7 to 82
+		const trailer = bytes => bytes.subarray(bytes.length - 128 - 69);
+		const text = bytes => [
+			...trailer(bytes).subarray(0, 69),
+			...trailer(bytes).subarray(69 + 7, 69 + 82),
+		];
+		expect(text(savedBytes)).toEqual(text(original));
+	});
+
+	it('indented and blank comment lines survive an open and resave', async () => {
+		// PabloDraw SauceInfo.cs, SauceComment.Save keeps both
+		const original = makeAnsi({
+			columns: 80,
+			rows: 5,
+			seed: 2,
+			sauce: { tinfo1: 80, tinfo2: 5, comments: ['  indented', '', 'third']},
+		});
+		await openAndWire('spaced.ans', original);
+		expect(mocks.ui.sauceComments.value).toBe('  indented\n\nthird');
+		const record = await saved();
+		expect(record.comments).toEqual(['  indented', '', 'third']);
+		const comnt = bytes =>
+			Array.from(bytes.subarray(bytes.length - 128 - 5 - 3 * 64, bytes.length - 128));
+		expect(comnt(savedBytes)).toEqual(comnt(original));
+	});
+
+	describe('a comment block of one blank line', () => {
+		// PabloDraw shows it as an empty box and keeps the line until the
+		// box is edited (SauceInfoDialog.cs, SauceInfo.cs SauceComment.Save)
+		const box = mocks.ui.sauceComments;
+		beforeEach(() => {
+			mocks.ui.sauceComments = document.createElement('textarea');
+		});
+		afterEach(() => {
+			mocks.ui.sauceComments = box;
+		});
+		const openBlankLine = () =>
+			openAndWire(
+				'blank.ans',
+				makeAnsi({ columns: 80, rows: 5, seed: 2, sauce: { tinfo1: 80, tinfo2: 5, comments: ['']} }),
+			);
+
+		it('opens as an empty box and saves back as one blank line', async () => {
+			await openBlankLine();
+			expect(mocks.ui.sauceComments.value).toBe('');
+			expect((await saved()).comments).toEqual(['']);
+		});
+
+		it('an edit drops the kept line', async () => {
+			await openBlankLine();
+			const comments = mocks.ui.sauceComments;
+			comments.value = 'x';
+			comments.dispatchEvent(new Event('input'));
+			comments.value = '';
+			comments.dispatchEvent(new Event('input'));
+			expect((await saved()).comments).toEqual([]);
+		});
+
+		it('another file\'s comments replace the kept line', async () => {
+			await openBlankLine();
+			await openAndWire(
+				'plain.ans',
+				makeAnsi({ columns: 80, rows: 5, seed: 2, sauce: { tinfo1: 80, tinfo2: 5 } }),
+			);
+			expect((await saved()).comments).toEqual([]);
+		});
+	});
+});
+
+describe('BIN width refusal', () => {
+	it('alerts why a 2-column BIN cannot save', async () => {
+		const alert = vi.spyOn(window, 'alert').mockImplementation(() => {});
+		const doc = u16ToV3({
+			imageData: new Uint16Array(4),
+			columns: 2,
+			rows: 2,
+			iceColors: false,
+			letterSpacing: false,
+		});
+		mocks.state.textArtCanvas.getDoc = () => doc;
+		await Save.bin();
+		await new Promise(r => setTimeout(r, 0));
+		expect(alert).toHaveBeenCalledWith(
+			expect.stringMatching(/^BIN export failed: .*2-column BIN reopens/),
+		);
+		expect(savedBytes).toBeNull();
+		alert.mockRestore();
+	});
+});
 
 describe('SAUCE flags lifecycle', () => {
 	it('LS no preference survives an untouched resave', async () => {
@@ -154,6 +250,22 @@ describe('SAUCE flags lifecycle', () => {
 		mocks.state.font.getLetterSpacing.mockReturnValue(true);
 		const record = await saved();
 		// a null stash disables no-preference: the toggle writes explicit
+		expect((record.flags >> 1) & 0x03).toBe(2);
+	});
+
+	it('an unknown SAUCE version resaves like a SAUCE-less open', async () => {
+		// SAUCE §Layout note 6: the record states no flags, so its zero
+		// LS bits cannot pin the resave to no preference
+		const bytes = makeAnsi({
+			columns: 80,
+			rows: 5,
+			seed: 2,
+			sauce: { tinfo1: 80, tinfo2: 5, flags: 0 },
+		});
+		bytes.fill(0x20, bytes.length - 123, bytes.length - 121);
+		await openAndWire('old.ans', bytes);
+		mocks.state.font.getLetterSpacing.mockReturnValue(true);
+		const record = await saved();
 		expect((record.flags >> 1) & 0x03).toBe(2);
 	});
 

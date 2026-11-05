@@ -1,9 +1,7 @@
 // @ts-check
 /**
- * A bounded most-recent-first list in localStorage, shared by the
- * color panel's recent swatches and the connect form's servers.
- * Reads tolerate blocked storage and corrupt values (both read as
- * empty); writes dedupe, front-load, and trim.
+ * A bounded most-recent-first list in localStorage. Blocked storage
+ * and corrupt values both read as empty.
  * @template T
  * @param {string} key
  * @param {number} limit

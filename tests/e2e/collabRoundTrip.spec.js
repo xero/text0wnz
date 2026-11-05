@@ -1,21 +1,19 @@
 /**
- * Live collab round trip: two real pages join a spawned bun server
- * (never a shared or public one) through the consent modal, draw in
- * both directions, and verify convergence plus no-self-echo. Chromium
- * project only: one engine exercises the full stack, the transport
- * logic is unit-tested engine-neutrally.
+ * Real pages against a spawned bun server, never a shared or public
+ * one. Chromium project only: one engine exercises the full stack, the
+ * transport logic is unit-tested engine-neutrally.
  */
 import { test, expect } from '@playwright/test';
-import { clickTool } from './helpers/editorHelpers.js';
+import { clickTool, loadSettled } from './helpers/editorHelpers.js';
 import { spawn, execSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 /**
- * Polls `url` until `ready(res)` holds, racing the child's own exit: a
- * taken port fails at once with the server's words instead of a 15
- * second poll against whatever squats there.
+ * Races the child's own exit: a taken port fails at once with the
+ * server's words instead of a 15 second poll against whatever squats
+ * there.
  */
 const awaitListening = async (child, url, ready, label) => {
 	let exit = null;
@@ -77,19 +75,26 @@ test.afterAll(() => {
 	}
 });
 
-const joinPage = async (browser, nick) => {
+// adoption swaps in the session doc after the socket connects and
+// titles the page by the room's SAUCE ('collab mode' while the room
+// has none) before the loading modal closes
+const sessionAdopted = async (page, title = /^collab mode/) => {
+	await expect(page).toHaveTitle(title);
+	await loadSettled(page);
+};
+
+const joinPage = async (browser, nick, { room = 'e2eroom', title } = {}) => {
 	const context = await browser.newContext();
 	const page = await context.newPage();
 	await page.addInitScript(n => {
 		window.localStorage.setItem('handle', n);
 	}, nick);
-	await page.goto(`/?test&server=ws://127.0.0.1:${port}/e2eroom`);
+	await page.goto(`/?test&server=ws://127.0.0.1:${port}/${room}`);
 	await page.waitForSelector('#bodyContainer[data-ready]', {
 		state: 'attached',
 		timeout: 10000,
 	});
 	await page.waitForFunction(() => Boolean(window.__t0wnz), null, { timeout: 10000 });
-	// the probe finds the server and opens the consent choice
 	await page.waitForSelector('#joinCollaboration', {
 		state: 'visible',
 		timeout: 10000,
@@ -100,15 +105,12 @@ const joinPage = async (browser, nick) => {
 		null,
 		{ timeout: 10000 },
 	);
-	await page.waitForTimeout(400);
+	await sessionAdopted(page, title);
 	return { context, page };
 };
 
 const drawAt = async (page, cx, cy) => {
-	await page.locator('#brushes').click();
-	await page.waitForTimeout(200);
 	await clickTool(page, 'halfblock');
-	await page.waitForTimeout(200);
 	const point = await page.evaluate(
 		([x, y]) => {
 			const s = window.__t0wnz.State;
@@ -123,7 +125,6 @@ const drawAt = async (page, cx, cy) => {
 		[cx, cy],
 	);
 	await page.mouse.click(point.x, point.y);
-	await page.waitForTimeout(300);
 };
 
 const charAt = (page, x, y) =>
@@ -144,17 +145,15 @@ test.describe('collab round trip against a live server', () => {
 		const a = await joinPage(browser, 'artist-a');
 		const b = await joinPage(browser, 'artist-b');
 
-		// A draws; the cell lands locally at once (apply-locally-on-send)
+		// apply-locally-on-send: the cell lands at once, no poll
 		await drawAt(a.page, 5, 5);
 		const drawnA = await charAt(a.page, 5, 5);
 		expect(drawnA).not.toBe(0);
 
-		// ...and reaches B through the server
 		await expect
 			.poll(() => charAt(b.page, 5, 5), { timeout: 10000 })
 			.toBe(drawnA);
 
-		// B draws back; A converges
 		await drawAt(b.page, 10, 3);
 		const drawnB = await charAt(b.page, 10, 3);
 		expect(drawnB).not.toBe(0);
@@ -162,10 +161,9 @@ test.describe('collab round trip against a live server', () => {
 			.poll(() => charAt(a.page, 10, 3), { timeout: 10000 })
 			.toBe(drawnB);
 
-		// no self-echo corruption: A's original cell is still intact
+		// no self-echo corruption
 		expect(await charAt(a.page, 5, 5)).toBe(drawnA);
 
-		// chat crosses with the sender's local render on both ends
 		await a.page.evaluate(() => {
 			window.__t0wnz.State.network.sendChat('hello from a');
 		});
@@ -195,7 +193,6 @@ test.describe('collab round trip against a live server', () => {
 		await drawAt(a.page, 7, 7);
 		const drawn = await charAt(a.page, 7, 7);
 		expect(drawn).not.toBe(0);
-		await a.page.waitForTimeout(300);
 
 		const late = await joinPage(browser, 'late');
 		await expect
@@ -204,6 +201,103 @@ test.describe('collab round trip against a live server', () => {
 
 		await a.context.close();
 		await late.context.close();
+	});
+
+	test('a late joiner adopts the room SAUCE, and its Done keeps it', async ({
+		browser,
+		browserName,
+	}) => {
+		test.skip(browserName !== 'chromium', 'one engine runs the full stack');
+		test.skip(!hasBun, 'bun is required to spawn the server');
+		test.slow();
+
+		// a room of its own: a titled e2eroom would retitle every later
+		// joiner in this worker
+		const room = 'sauceroom';
+		const titled = /^room title/;
+		const a = await joinPage(browser, 'sauce-a', { room });
+		const b = await joinPage(browser, 'sauce-b', { room });
+		await a.page.locator('#navSauce').click();
+		await a.page.locator('#sauceTitle').fill('room title');
+		await a.page.locator('#sauceAuthor').fill('room author');
+		await a.page.locator('#sauceDone').click();
+		// b hears it only after the server applied it
+		await expect(b.page.locator('#sauceTitle')).toHaveValue('room title', { timeout: 10000 });
+		await expect(b.page).toHaveTitle(titled);
+
+		const late = await joinPage(browser, 'sauce-late', { room, title: titled });
+		await expect(late.page.locator('#sauceTitle')).toHaveValue('room title');
+		await expect(late.page.locator('#sauceAuthor')).toHaveValue('room author');
+		await expect(late.page.locator('#sauceInfoTitle')).toHaveText('room title');
+
+		// a Done with nothing edited sends what the editor holds
+		await late.page.locator('#navSauce').click();
+		await late.page.locator('#sauceDone').click();
+		// the server relays the late joiner's frames in order, so the
+		// chat lands on a after its SAUCE did
+		await late.page.evaluate(() => {
+			window.__t0wnz.State.network.sendChat('sauce done');
+		});
+		await expect
+			.poll(
+				() =>
+					a.page.evaluate(
+						() => document.getElementById('messageWindow')?.textContent ?? '',
+					),
+				{ timeout: 10000 },
+			)
+			.toContain('sauce done');
+		await expect(a.page.locator('#sauceTitle')).toHaveValue('room title');
+		await expect(a.page.locator('#sauceAuthor')).toHaveValue('room author');
+		await expect(a.page).toHaveTitle(titled);
+
+		await a.context.close();
+		await b.context.close();
+		await late.context.close();
+	});
+
+	test('a peer SAUCE waits while the Sauce Editor is open, and Cancel lands it over the typing', async ({
+		browser,
+		browserName,
+	}) => {
+		test.skip(browserName !== 'chromium', 'one engine runs the full stack');
+		test.skip(!hasBun, 'bun is required to spawn the server');
+		test.slow();
+
+		const room = 'draftroom';
+		const a = await joinPage(browser, 'draft-a', { room });
+		const b = await joinPage(browser, 'draft-b', { room });
+		await b.page.locator('#navSauce').click();
+		await b.page.locator('#sauceAuthor').fill('half typed');
+		await a.page.locator('#navSauce').click();
+		await a.page.locator('#sauceTitle').fill('peer title');
+		await a.page.locator('#sauceDone').click();
+		// the server relays a's frames in order, so b has the SAUCE once
+		// the chat behind it shows
+		await a.page.evaluate(() => {
+			window.__t0wnz.State.network.sendChat('sauce sent');
+		});
+		await expect
+			.poll(
+				() =>
+					b.page.evaluate(
+						() => document.getElementById('messageWindow')?.textContent ?? '',
+					),
+				{ timeout: 10000 },
+			)
+			.toContain('sauce sent');
+		await expect(b.page.locator('#sauceAuthor')).toHaveValue('half typed');
+		await expect(b.page.locator('#sauceTitle')).toHaveValue('');
+		await expect(b.page).toHaveTitle(/^collab mode/);
+
+		await b.page.locator('#sauceModal button.close').click();
+		await expect(b.page.locator('#sauceTitle')).toHaveValue('peer title');
+		await expect(b.page.locator('#sauceAuthor')).toHaveValue('');
+		await expect(b.page).toHaveTitle(/^peer title/);
+		await expect(b.page.locator('#sauceInfoTitle')).toHaveText('peer title');
+
+		await a.context.close();
+		await b.context.close();
 	});
 
 	test('unicode and truecolor cells converge natively (extension suite)', async ({
@@ -217,14 +311,15 @@ test.describe('collab round trip against a live server', () => {
 		const a = await joinPage(browser, 'uni-a');
 		const b = await joinPage(browser, 'uni-b');
 
-		// both sides negotiated the suite
-		expect(
-			await a.page.evaluate(() =>
-				window.__t0wnz.State.network.extCollab()),
-		).toBe(true);
+		for (const side of [a, b]) {
+			expect(
+				await side.page.evaluate(() =>
+					window.__t0wnz.State.network.extCollab()),
+			).toBe(true);
+		}
 
-		// A draws a heavy black heart suit in truecolor orange through the
-		// editor core (the same path the tools use)
+		// HEAVY BLACK HEART in truecolor orange, through the editor core
+		// (the same path the tools use)
 		await a.page.evaluate(async () => {
 			const { State } = window.__t0wnz;
 			const resolved = await State.textArtCanvas.resolveUnicode([0x2764]);
@@ -240,6 +335,7 @@ test.describe('collab round trip against a live server', () => {
 				const glyphId = doc.frames[0].glyph[index] & 0xffff;
 				return {
 					codepoint: doc.glyphTable.get(glyphId)?.codepoint ?? null,
+					fontSlot: doc.glyphTable.get(glyphId)?.fontSlot ?? null,
 					fg: doc.frames[0].fg[index] >>> 0,
 				};
 			});
@@ -248,8 +344,7 @@ test.describe('collab round trip against a live server', () => {
 			.toBe(0x2764);
 		expect((await cellOnB()).fg).toBe(0xff8800);
 
-		// a late vanilla-fidelity check: the late joiner adopts via
-		// EXT_SYNC and sees the identical cell
+		// the late joiner adopts via EXT_SYNC and sees the identical cell
 		const late = await joinPage(browser, 'uni-late');
 		const cellOnLate = () =>
 			late.page.evaluate(() => {
@@ -258,6 +353,7 @@ test.describe('collab round trip against a live server', () => {
 				const glyphId = doc.frames[0].glyph[index] & 0xffff;
 				return {
 					codepoint: doc.glyphTable.get(glyphId)?.codepoint ?? null,
+					fontSlot: doc.glyphTable.get(glyphId)?.fontSlot ?? null,
 					fg: doc.frames[0].fg[index] >>> 0,
 				};
 			});
@@ -265,6 +361,46 @@ test.describe('collab round trip against a live server', () => {
 			.poll(async () => (await cellOnLate()).codepoint, { timeout: 10000 })
 			.toBe(0x2764);
 		expect((await cellOnLate()).fg).toBe(0xff8800);
+		// the classic slot has no unicode font, so a heart filed there
+		// draws as the substitute box
+		expect((await cellOnLate()).fontSlot).toBe((await cellOnB()).fontSlot);
+
+		await a.context.close();
+		await b.context.close();
+		await late.context.close();
+	});
+
+	test('text, NUL, and 255 keep their glyphs for a live peer and a late joiner', async ({
+		browser,
+		browserName,
+	}) => {
+		test.skip(browserName !== 'chromium', 'one engine runs the full stack');
+		test.skip(!hasBun, 'bun is required to spawn the server');
+		test.slow();
+
+		const a = await joinPage(browser, 'text-a');
+		const b = await joinPage(browser, 'text-b');
+		// a blue background makes every cell a change, the NUL included
+		await a.page.evaluate(() => {
+			window.__t0wnz.State.textArtCanvas.draw(cb => {
+				[65, 0, 255, 32].forEach((code, i) => cb(code, 7, 1, 12 + i, 9));
+			}, false);
+		});
+		const glyphs = page =>
+			page.evaluate(() => {
+				const doc = window.__t0wnz.State.textArtCanvas.getDoc();
+				return [12, 13, 14, 15].map(
+					x => doc.frames[0].glyph[9 * doc.getColumns() + x] & 0xffff,
+				);
+			});
+		await expect
+			.poll(() => glyphs(b.page), { timeout: 10000 })
+			.toEqual([65, 0, 255, 32]);
+
+		const late = await joinPage(browser, 'text-late');
+		await expect
+			.poll(() => glyphs(late.page), { timeout: 10000 })
+			.toEqual([65, 0, 255, 32]);
 
 		await a.context.close();
 		await b.context.close();
@@ -308,7 +444,7 @@ test.describe('collab round trip against a live server', () => {
 				null,
 				{ timeout: 10000 },
 			);
-			await page.waitForTimeout(400);
+			await sessionAdopted(page);
 			// resize past the SERVER wall but inside the client wall: the
 			// client applies locally, the server refuses with an ack, and
 			// sync recovery restores truth. The local-apply read must happen

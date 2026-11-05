@@ -64,9 +64,8 @@ both sides together.
   path-based (`wss://host/roomname`; `/` and `/server` reach the
   default room, so existing Caddy and nginx proxy configs keep
   working).
-- Spectators default to read-only drawing with chat allowed. Set
-  per-room passwords with the `ROOM_PASSWORDS` environment variable
-  (JSON, `{"room":"pw"}`).
+- Spectators can chat but not draw. Set per-room passwords with the
+  `ROOM_PASSWORDS` environment variable (JSON, `{"room":"pw"}`).
 - The server saves on SIGTERM now as well as SIGINT, so `docker stop`
   no longer loses unsaved work.
 
@@ -128,9 +127,13 @@ worker stamps it. The server rebuilds every broadcast with the id it
 assigned, so ids cannot be spoofed.
 
 **Cells.** `u` is a Unicode codepoint (0 to 0x10FFFF, surrogate halves
-rejected); CP437 glyphs travel as their codepoints. `a` is the glyph
-attribute byte: bit 0 blink, bit 1 reserved. `fg` and `bg` are v3 color
-words: bit 31 set means a palette index in the low 8 bits, bit 31 clear
+rejected); CP437 glyphs travel as their codepoints. CP437 maps both
+NUL and 255 to U+00A0, so NUL travels as U+0000 and U+00A0 always
+means 255. A receiver draws any codepoint CP437 covers, printable
+ASCII included, as that CP437 glyph in the session font, and draws the
+rest from the bundled Unicode fonts. `a` is the glyph attribute byte:
+bit 0 blink, bit 1 reserved. `fg` and `bg` are v3 color words: bit 31
+set means a palette index in the low 8 bits, bit 31 clear
 means `0x00RRGGBB`. The server canonicalizes every word at intake,
 keeping the 8-bit index or the 24 color bits and nothing else.
 

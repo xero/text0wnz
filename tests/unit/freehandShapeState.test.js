@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /**
- * Drag state lifecycle pins: stale corners once survived disable() and
- * the drag comparator once ignored moves landing back on the start
- * cell. Both commit wrong shapes, so they are pinned at the committed
- * cell level in block mode.
+ * Corners must not survive disable(), and the drag comparator must not
+ * ignore a move landing back on the start cell. Either slip commits a
+ * wrong shape, so both are pinned at the committed cell level in block
+ * mode.
  */
 const hoisted = vi.hoisted(() => ({ draws: []}));
 
@@ -127,7 +127,7 @@ describe('shape drag state lifecycle', () => {
 		handler('onTextCanvasDown')(at(60, 8));
 		handler('onTextCanvasUp')();
 		const xs = hoisted.draws.map(d => d.x);
-		// a stale corner once stretched this tap into a 20..60 box
+		// a stale corner would stretch this tap into a 20..60 box
 		expect(Math.min(...xs)).toBeGreaterThanOrEqual(59);
 	});
 
@@ -139,7 +139,7 @@ describe('shape drag state lifecycle', () => {
 		handler('onTextCanvasDrag')(at(5, 8));
 		handler('onTextCanvasUp')();
 		const xs = hoisted.draws.map(d => d.x);
-		// the comparator once ignored the move back, committing 5..10
+		// ignoring the move back would commit 5..10
 		expect(Math.max(...xs)).toBeLessThanOrEqual(6);
 	});
 });

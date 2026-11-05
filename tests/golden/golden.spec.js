@@ -1,10 +1,8 @@
 /**
- * Golden screenshot suite: the pixel-regression harness for the
- * renderer. Matrix: fixture (CP437 bin / ice bin / 512-glyph
- * XBin with custom palette) x font (CP437, Topaz 1200) x zoom (1, 2) x
- * letter spacing (8px, 9px), minus nonsense combos. Plus real artwork
- * (docs/examples, the author's own pieces): dense shading/color coverage and
- * a real ANSI escape-code parse that no synthetic testcard reaches.
+ * Golden screenshot suite: the renderer's pixel-regression harness. The
+ * real artwork (docs/examples, the author's own pieces) adds dense
+ * shading/color coverage and a real ANSI escape-code parse that no
+ * synthetic testcard reaches.
  *
  * Goldens are generated ONLY in the CI container (linux, dpr 1); local runs
  * on other machines execute the flows but skip pixel assertions
@@ -153,7 +151,7 @@ const applyView = async (page, { font, zoom, nine, ice }) => {
 		}
 		// Settle with a full synchronous-progressive repaint
 		await new Promise(resolve =>
-			State.textArtCanvas.redrawEntireImage(null, resolve));
+			State.textArtCanvas.redrawEntireImage(resolve));
 	}, { font, zoom, nine, ice });
 	// One more frame for the compositor
 	await page.waitForTimeout(100);
@@ -164,7 +162,8 @@ const seedSkip = (testInfo, name) =>
 	// the flow but skips the pixel assertion instead of failing. The
 	// golden-gl project's snapshotPathTemplate pins the same -golden
 	// suffix as the 2D project, so one name covers both (the GL-only
-	// unicode goldens are seeded by the workflow's golden-gl step)
+	// unicode and 512-glyph XBin goldens are seeded by the workflow's
+	// golden-gl step)
 	test.skip(
 		!!process.env.CI &&
 		testInfo.config.updateSnapshots === 'missing' &&
@@ -216,7 +215,7 @@ test.describe('golden real artwork screenshots', () => {
 			await page.evaluate(async () => {
 				const { State } = window.__t0wnz;
 				await new Promise(resolve =>
-					State.textArtCanvas.redrawEntireImage(null, resolve));
+					State.textArtCanvas.redrawEntireImage(resolve));
 			});
 			await page.waitForTimeout(100);
 			// Clip to the art visible inside the scroller (client area, so
@@ -275,7 +274,7 @@ test.describe('golden unicode screenshots', () => {
 			await page.evaluate(async () => {
 				const { State } = window.__t0wnz;
 				await new Promise(resolve =>
-					State.textArtCanvas.redrawEntireImage(null, resolve));
+					State.textArtCanvas.redrawEntireImage(resolve));
 			});
 			await page.waitForTimeout(100);
 			await expect(page.locator('#canvasContainer')).toHaveScreenshot(name, {

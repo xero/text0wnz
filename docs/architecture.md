@@ -126,7 +126,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 - Canvas dimensions and configuration
 - Current tool and color selection
 - Font and palette management
-- Undo/redo history
+- Local autosave of the canvas and settings, kept out of live sessions
 
 **Canvas Rendering** (`glRenderer.js`, `canvas.js`)
 
@@ -175,6 +175,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 
 **File Operations** (`file.js`)
 
+- Every open decodes through the shared core codecs in `src/js/core/codecs/`
 - ANSI format (.ans, .utf8.ans)
 - Binary format (.bin)
 - XBIN format (.xb)
@@ -220,7 +221,7 @@ User Action → State Update → Canvas Render → WebSocket Send → Server Bro
 **Storage** (`storage.js`)
 
 - IndexedDB for canvas persistence: the snapshot (`Uint16Array` plus columns and rows) is stored directly
-- One shared database connection; stores for canvas data, embedded XBin font bytes, undo history, and the reference image
+- One shared database connection; stores for canvas data, embedded XBin font bytes, and the reference image, plus one that keeps only what a v2 install left
 - Automatic save/restore driven by `state.js`
 - Editor settings in `localStorage`
 
@@ -487,7 +488,7 @@ When a drawing occurs:
 └─────────────┘
 ```
 
-The OPFS journal records the same commits independently (see Storage and Persistence). Undo history is written separately, only on idle, `visibilitychange`, and `pagehide`.
+The OPFS journal records the same commits independently (see Storage and Persistence). The undo history itself never leaves memory, so a reload restores your work with an empty history.
 
 ## Module Structure
 
@@ -600,12 +601,12 @@ main.js
 codeSplitting: {
     includeDependenciesRecursively: false,
     groups: [
-        { name: 'core',    test: /(magicNumbers|state|storage|compression|ui)\.js$/ },
-        { name: 'canvas',  test: /(canvas|font|lazyFont|fontCache)\.js$/ },
-        { name: 'tools',   test: /(freehandTools|keyboard|toolbar)\.js$/ },
-        { name: 'fileops', test: /file\.js$/ },
-        { name: 'network', test: /network\.js$/ },
-        { name: 'palette', test: /palette\.js$/ },
+        { name: 'core', test: /[\\/]src[\\/]js[\\/]client[\\/](magicNumbers|state|storage|ui)\.js$|vite[\\/]preload-helper/ },
+        { name: 'canvas', test: /[\\/]src[\\/]js[\\/]client[\\/](canvas|font|lazyFont|fontCache)\.js$/ },
+        { name: 'tools', test: /[\\/]src[\\/]js[\\/]client[\\/](keyboard|toolbar)\.js$/ },
+        { name: 'fileops', test: /[\\/]src[\\/]js[\\/]client[\\/]file\.js$/ },
+        { name: 'network', test: /[\\/]src[\\/]js[\\/]client[\\/]network\.js$/ },
+        { name: 'palette', test: /[\\/]src[\\/]js[\\/]client[\\/]palette\.js$/ },
     ],
 }
 ```
@@ -687,7 +688,7 @@ Sizes are from a `bun bake` at the time of writing and drift with every change. 
 
 3. **`undoHistory`**
    - Key: `currentUndoHistory`
-   - Value: none on the current version; the byte-budgeted undo arena does not serialize, so the store stays empty and the undo stack starts fresh each session
+   - Value: a v2 install's undo history, which nothing reads or writes; `clearAll` empties it. The byte-budgeted undo arena does not serialize, so the undo stack starts fresh each session
 
 4. **`refImage`**
    - Key: `currentRef`
@@ -703,7 +704,13 @@ The database is at version 4; `storage.js` opens one shared connection and reope
 
 **Auto-Save Strategy:**
 
-The OPFS autosave journal (`journalStore.js`, with `journalWorker.js` owning the file) is the source of truth for restoring work in progress. The IndexedDB snapshot is the fallback; restoring it re-seeds the journal.
+The OPFS autosave journal (`journalStore.js`, with `journalWorker.js` owning the file) is the source of truth for restoring work in progress. The IndexedDB snapshot is the fallback; restoring it re-seeds the journal. Keyframes wait while the restore runs, so none overwrites the journal before the restore reads it.
+
+Clearing local storage, which File > New and Update Editor with no update waiting both do, wipes the journal too, because the restore prefers it. Stopping the journal closes the store. The `?profile` rig, a restore that fails before it adopts the saved doc, and the reset all stop it. Closing releases the OPFS lock for another tab, and later calls reject at once. A clear after a stop still empties the persisted journal, through a store opened for the wipe alone. A page hide writes any keyframe still waiting out its debounce, because a hidden tab throttles or freezes timers. Leaving a collab session commits any open group and writes a keyframe, so the autosave holds what the screen shows.
+
+The store probes for its backend once. Where `navigator.storage.getDirectory()` rejects, as in Firefox private windows and Playwright's WebKit, the journal keeps an IndexedDB record log instead, and where IndexedDB refuses too, a memory log that dies with the tab. An OPFS call that fails after the probe never falls back. A second tab, for example, cannot take the lock on the journal file, and an IndexedDB log there may hold an older episode's journal, which would restore worse than the snapshot does. A worker whose setup fails retries on its next call, so a second tab starts journaling once the first one closes.
+
+Two limits remain. The IndexedDB log has no cross-tab lock, so two tabs on it interleave their records. A tab that cannot journal still saves settings and the snapshot, so a reload of the tab that can restores its own art under the other tab's settings.
 
 ### Service Worker Cache (Cache API)
 
@@ -799,24 +806,28 @@ document.dispatchEvent(
 document.addEventListener('onTextCanvasChange', handler);
 ```
 
-### Command Pattern
+### Undo History
 
-Undo/redo system:
+Undo lives in the patch arena (`core/patchArena.ts`), a byte-capped ring the editor core (`core/editor.ts`) writes through. Every step is either a stroke or a canvas resize:
+
+- **Stroke.** One undo group. It records `(index, before, after)` triples for each plane it touched, keyed by cell index, plus the frame it was drawn in. `startUndo()` closes the previous group. The open group commits at the next flush point, once editing idles for 300ms, or when the page hides, so the autosave journal holds the last edit. A held press or a floating selection move keeps its group open across pauses. At each pause, or a page hide after a write, the group reaches the journal as a provisional stroke record: its triples so far, frozen as a commit would freeze them, with the group left open. Replay applies after values in order, and the record the group commits later carries every touched cell's final value, so it lands over the provisionals to the same doc. The record encodes in the pause's own task, as a plain stroke's append does, so on OPFS it usually lands before a reload unloads the page. When a doc-level change has no keyframe in the store yet, the open group journals as a keyframe instead. An iCE toggle commits the open group first, so one group never mixes blink folds.
+- **Resize.** One step across every frame. It keeps only the non-blank cells the resize cut off, indexed at the geometry they fell from. Undo resizes back and restores them. Redo resizes again and restores whatever the undo cut off in turn, such as a frame added since or a peer's draw.
 
 ```javascript
-const command = {
-	execute: () => {
-		/* apply change */
-	},
-	undo: () => {
-		/* revert change */
-	},
-};
-
-State.textArtCanvas.startUndo(); // Push to undo stack
-// ... make changes ...
-State.textArtCanvas.endUndo(); // Finalize undo entry
+State.textArtCanvas.startUndo(); // close the previous group
+// ... draw ...
+State.textArtCanvas.endUndo(); // commit the open group now
 ```
+
+A stroke's cell indexes only hold at its own geometry, so strokes and resizes share one ring. Undo always walks back through a resize before it reaches the strokes drawn under the older size. A resize step counts toward the byte cap like a stroke, and eviction drops the oldest steps first, so every stroke left in the ring sits at a geometry undo can still reach. An undo or redo of a resize cuts cells again and can grow the ring, so it evicts like a commit. Eviction never takes the step at the undo cursor, so one op bigger than the cap stays undoable until the next step pushes it out.
+
+Each step remembers the iCE flag its words were recorded under. Undo and redo restore them verbatim under that flag and refold them under the other, so a loaded cell in a fold no edit writes, such as a UTF-8 ANSI's steady bright background without iCE, survives an undo.
+
+Opening a file, New, deleting a frame, and a collaborator's resize clear the history instead of becoming steps. Each one replaces the document or moves the cell indexes and frame numbers that recorded steps point at. Adding a frame keeps the history, because a new frame lands after every frame a step already recorded.
+
+Undo is local to each user. Remote ops never enter the arena, so a peer's resize clears your history rather than becoming your step. When you undo or redo your own resize in a session, `canvas.js` sends the size change before the restored cells. Both ride the same worker channel and socket in order, and the server applies and fans out mutations in sequence order, so every peer resizes first and then receives cells inside its new bounds.
+
+The OPFS journal never stores a resize as a stroke record. A resize, and an undo or redo of one, writes a fresh keyframe. A stroke drawn after it appends behind that keyframe, and if the keyframe fails to write, the journal drops strokes until a fresh one lands, so a reload never replays a stroke against the wrong geometry. The arena itself stays in memory. A reload restores the content and starts an empty history.
 
 ### Strategy Pattern
 
@@ -876,10 +887,7 @@ Monitor scroll position to determine which chunks are visible:
 ```javascript
 const viewportState = {
 	scrollTop: 0,
-	scrollLeft: 0,
 	containerHeight: 0,
-	visibleStartRow: 0,
-	visibleEndRow: 0,
 };
 
 function calculateVisibleChunks() {
@@ -1015,12 +1023,11 @@ viewportElement.addEventListener('scroll', handleScroll, { passive: true });
 let dirtyRegionScheduled = false;
 
 function processDirtyRegions() {
-	if (dirtyRegions.length === 0 || processingDirtyRegions) return;
+	if (dirtyRegions.length === 0) return;
 
 	if (!dirtyRegionScheduled) {
 		dirtyRegionScheduled = true;
 		requestAnimationFrame(() => {
-			processingDirtyRegions = true;
 			const coalescedRegions = coalesceRegions(dirtyRegions);
 			dirtyRegions = [];
 
@@ -1028,7 +1035,6 @@ function processDirtyRegions() {
 				drawRegion(region.x, region.y, region.w, region.h);
 			});
 
-			processingDirtyRegions = false;
 			dirtyRegionScheduled = false;
 		});
 	}
@@ -1047,7 +1053,7 @@ function processDirtyRegions() {
 For large canvases, render in batches across multiple frames:
 
 ```javascript
-function redrawEntireImage(onProgress, onComplete) {
+function redrawEntireImage(onComplete) {
 	const totalCells = rows * columns;
 
 	// Dynamic batch sizing
@@ -1063,8 +1069,6 @@ function redrawEntireImage(onProgress, onComplete) {
 	function renderBatch(startRow) {
 		const endRow = Math.min(startRow + batchSize, rows);
 		drawRegion(0, startRow, columns, endRow - startRow);
-
-		if (onProgress) onProgress(endRow / rows);
 
 		if (endRow < rows) {
 			requestAnimationFrame(() => renderBatch(endRow));
@@ -1242,8 +1246,8 @@ if (!hasNonDefaultZoom && (this.isDefaultState() || network?.isConnected?.())) {
 }
 ```
 
-**Deferred heavy writes:**
-Undo history is the large write, so `main.js` schedules it through `requestIdleCallback` and on `visibilitychange` and `pagehide` rather than on every stroke.
+**Undo stays in memory:**
+The patch arena does not serialize, and nothing saves or restores it. A reload restores the content from the OPFS journal and starts an empty history.
 
 ## Related Documentation
 

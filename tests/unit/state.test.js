@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import State from '../../src/js/client/state.js';
 
 // test-local isolation for the shared singleton: production never
-// resets state (the deleted reset() had no callers outside this file)
+// resets state
 const resetState = () => {
 	Object.assign(State._manager.state, {
 		textArtCanvas: null,
@@ -17,25 +17,9 @@ const resetState = () => {
 		positionInfo: null,
 		toolPreview: null,
 		pasteTool: null,
-		chat: null,
-		sampleTool: null,
 		network: null,
 		worker: null,
 		title: null,
-		initialized: false,
-		initializing: false,
-		dependenciesReady: {
-			palette: false,
-			textArtCanvas: false,
-			font: false,
-			modal: false,
-			cursor: false,
-			selectionCursor: false,
-			selectionTool: false,
-			positionInfo: false,
-			toolPreview: false,
-			pasteTool: false,
-		},
 	});
 };
 
@@ -55,33 +39,33 @@ describe('State Management System', () => {
 	describe('Basic State Operations', () => {
 		it('should set and get state values', () => {
 			State._manager.set('title', 'Test Title');
-			expect(State._manager.get('title')).toBe('Test Title');
+			expect(State._state.title).toBe('Test Title');
 		});
 
 		it('should return null for non-existent keys initially', () => {
-			expect(State._manager.get('nonExistentKey')).toBeUndefined();
+			expect(State._state.nonExistentKey).toBeUndefined();
 		});
 
 		it('should update existing values', () => {
 			State._manager.set('title', 'Original Title');
 			State._manager.set('title', 'Updated Title');
-			expect(State._manager.get('title')).toBe('Updated Title');
+			expect(State._state.title).toBe('Updated Title');
 		});
 
 		it('should handle null and undefined values', () => {
 			State._manager.set('title', null);
 			State._manager.set('worker', undefined);
 
-			expect(State._manager.get('title')).toBeNull();
-			expect(State._manager.get('worker')).toBeUndefined();
+			expect(State._state.title).toBeNull();
+			expect(State._state.worker).toBeUndefined();
 		});
 
 		it('should support method chaining for set operations', () => {
 			const result = State._manager.set('title', 'Test').set('palette', {});
 
 			expect(result).toBe(State._manager);
-			expect(State._manager.get('title')).toBe('Test');
-			expect(State._manager.get('palette')).toEqual({});
+			expect(State._state.title).toBe('Test');
+			expect(State._state.palette).toEqual({});
 		});
 	});
 
@@ -104,38 +88,6 @@ describe('State Management System', () => {
 				State[component] = testValue;
 				expect(State[component]).toEqual(testValue);
 			});
-		});
-
-		it('should update dependency readiness when setting tracked components', () => {
-			const trackedComponents = [
-				'palette',
-				'textArtCanvas',
-				'font',
-				'cursor',
-				'selectionCursor',
-				'positionInfo',
-				'toolPreview',
-				'pasteTool',
-			];
-
-			trackedComponents.forEach(component => {
-				State[component] = { test: component };
-				expect(State._state.dependenciesReady[component]).toBe(true);
-			});
-		});
-
-		it('should mark dependencies as not ready when set to null or undefined', () => {
-			State.palette = { test: 'palette' };
-			expect(State._state.dependenciesReady.palette).toBe(true);
-
-			State.palette = null;
-			expect(State._state.dependenciesReady.palette).toBe(false);
-
-			State.font = { test: 'font' };
-			expect(State._state.dependenciesReady.font).toBe(true);
-
-			State.font = undefined;
-			expect(State._state.dependenciesReady.font).toBe(false);
 		});
 	});
 
@@ -229,75 +181,6 @@ describe('State Management System', () => {
 		});
 	});
 
-	describe('Initialization System', () => {
-		it('should track initialization state', () => {
-			expect(State._state.initialized).toBe(false);
-			expect(State._state.initializing).toBe(false);
-		});
-
-		it('should start initialization', () => {
-			State.startInitialization();
-
-			expect(State._state.initializing).toBe(true);
-			expect(State._state.initialized).toBe(false);
-		});
-
-		it('should warn when trying to start initialization multiple times', () => {
-			const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-			State.startInitialization();
-			State.startInitialization();
-
-			expect(consoleSpy).toHaveBeenCalledWith(
-				'[State] Initialization already in progress or complete',
-			);
-			consoleSpy.mockRestore();
-		});
-
-		it('should complete initialization when all dependencies are ready', () => {
-			State.startInitialization();
-
-			State.palette = { test: 'palette' };
-			State.textArtCanvas = { test: 'canvas' };
-			State.font = { test: 'font' };
-			State.modal = { test: 'modal' };
-			State.cursor = { test: 'cursor' };
-			State.selectionCursor = { test: 'selectionCursor' };
-			State.selectionTool = { test: 'selectionTool' };
-			State.positionInfo = { test: 'positionInfo' };
-			State.toolPreview = { test: 'toolPreview' };
-			State.pasteTool = { test: 'pasteTool' };
-
-			expect(State._state.initialized).toBe(true);
-			expect(State._state.initializing).toBe(false);
-		});
-
-		it('should not complete initialization if not all dependencies are ready', () => {
-			State.startInitialization();
-
-			State.palette = { test: 'palette' };
-			State.font = { test: 'font' };
-
-			expect(State._state.initialized).toBe(false);
-			expect(State._state.initializing).toBe(true);
-		});
-
-		it('should not initialize if not started', () => {
-			// Set all dependencies without starting initialization
-			State.palette = { test: 'palette' };
-			State.textArtCanvas = { test: 'canvas' };
-			State.font = { test: 'font' };
-			State.cursor = { test: 'cursor' };
-			State.selectionCursor = { test: 'selectionCursor' };
-			State.positionInfo = { test: 'positionInfo' };
-			State.toolPreview = { test: 'toolPreview' };
-			State.pasteTool = { test: 'pasteTool' };
-
-			expect(State._state.initialized).toBe(false);
-			expect(State._state.initializing).toBe(false);
-		});
-	});
-
 	describe('Edge Cases and Error Handling', () => {
 		it('should handle undefined dependencies gracefully', () => {
 			expect(() => {
@@ -313,26 +196,11 @@ describe('State Management System', () => {
 
 		it('should handle setting non-tracked properties', () => {
 			State._manager.set('customProperty', 'value');
-			expect(State._manager.get('customProperty')).toBe('value');
+			expect(State._state.customProperty).toBe('value');
 		});
 
-		it('should handle dependency checks for non-existent properties', () => {
-			State._manager.checkDependencyQueue('nonExistentProperty');
-		});
-
-		it('should handle initialization completion checks when not initializing', () => {
-			// Set all dependencies without starting initialization
-			State.palette = { test: 'palette' };
-			State.textArtCanvas = { test: 'canvas' };
-			State.font = { test: 'font' };
-			State.cursor = { test: 'cursor' };
-			State.selectionCursor = { test: 'selectionCursor' };
-			State.positionInfo = { test: 'positionInfo' };
-			State.toolPreview = { test: 'toolPreview' };
-			State.pasteTool = { test: 'pasteTool' };
-
-			// Should not initialize since initializing flag is false
-			expect(State._state.initialized).toBe(false);
+		it('runs a dependency check with an empty queue', () => {
+			expect(() => State._manager.checkDependencyQueue()).not.toThrow();
 		});
 	});
 
@@ -354,21 +222,16 @@ describe('State Management System', () => {
 		});
 
 		it('should have all expected utility methods', () => {
-			// the pub/sub surface (on/off/emit/reset/safely/status) is gone:
-			// nothing in production ever subscribed
-			const expectedMethods = ['waitFor', 'startInitialization'];
-
-			expectedMethods.forEach(method => {
-				expect(typeof State[method]).toBe('function');
-			});
+			expect(typeof State.waitFor).toBe('function');
 		});
 
 		it('should properly bind StateManager methods', () => {
-			// Test that methods maintain proper context when destructured
-			const { set, get } = State._manager;
+			const { waitFor } = State;
+			const callback = vi.fn();
 
-			set('title', 'Bound Test');
-			expect(get('title')).toBe('Bound Test');
+			waitFor('title', callback);
+			State._manager.set('title', 'Bound Test');
+			expect(callback).toHaveBeenCalledWith({ title: 'Bound Test' });
 		});
 	});
 

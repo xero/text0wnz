@@ -1,6 +1,5 @@
 /**
- * Room persistence through the shared codecs: native .0wnz round trip,
- * the legacy v2 .bin migration path, and sha1-deduped hourly backups.
+ * Room persistence through the shared codecs.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
@@ -32,6 +31,7 @@ import {
 	createDocV3,
 	encodeBin,
 	expandExtCells,
+	fitComments,
 	glyphWord,
 	paletteColor,
 } from '../../../src/js/core/index';
@@ -88,7 +88,7 @@ describe('room persistence', () => {
 		expect(existsSync(stateFile(dir, 'race'))).toBe(false);
 	});
 
-	it('restores a pre-sweep sidecar whose join palette is 6-bit arrays, then self-heals it', async () => {
+	it('restores a sidecar join palette of 6-bit arrays as 8-bit {r,g,b} and saves it back in that shape', async () => {
 		const palette = Array.from({ length: 16 }, () => [0, 0, 0]);
 		palette[1] = [4, 12, 32];
 		const join = {
@@ -127,6 +127,26 @@ describe('room persistence', () => {
 		// the sidecar self-heals into the canonical {r,g,b} shape
 		expect(rewritten.join.palette[0]).toHaveProperty('r');
 		expect(rewritten.join.palette[1]).toEqual({ r: 16, g: 48, b: 130 });
+	});
+
+	it('restores sidecar comments cut to the lines a local save keeps', async () => {
+		// 4096 characters pass a 4096-character clamp but hold 4091 lines
+		const comments = `top${'\n'.repeat(4090)}end`;
+		const join = {
+			columns: 1,
+			rows: 1,
+			data: [{ code: 32, fg: 7, bg: 0 }],
+			comments,
+		};
+		writeFileSync(stateFile(dir, 'long'), JSON.stringify({ join, chat: []}));
+		const room = createRoom({ name: 'long', columns: 1, rows: 1 });
+		room.loadState(await loadRoomDoc(dir, 'long'));
+		const fitted = fitComments(comments)[0];
+		expect(fitted.split('\n')).toHaveLength(255);
+		expect(room.toJoinDoc().comments).toBe(fitted);
+		await saveRoom(room, dir);
+		const rewritten = JSON.parse(readFileSync(stateFile(dir, 'long'), 'utf8'));
+		expect(rewritten.join.comments).toBe(fitted);
 	});
 
 	it('migrateSessionCase renames mixed-case session files to lowercase', async () => {
@@ -170,7 +190,7 @@ describe('room persistence', () => {
 	});
 
 	it('blank-room GC removes the legacy .bin so erased art stays erased', async () => {
-		const doc = createDocV3({ columns: 2, rows: 1 });
+		const doc = createDocV3({ columns: 4, rows: 1 });
 		doc.setCell(0, 0, 0, {
 			glyph: glyphWord(65, 0),
 			fg: paletteColor(7),
@@ -188,7 +208,6 @@ describe('room persistence', () => {
 		});
 		expect(room.isBlank()).toBe(true);
 		await removeRoomFiles(dir, 'foo');
-		// at HEAD the .bin survived and re-restored the erased art
 		expect(await loadRoomDoc(dir, 'foo')).toBeNull();
 	});
 

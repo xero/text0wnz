@@ -1,42 +1,25 @@
 /**
- * teXt0wnz collab extension suite v1 (cap "t0wnz-ext-1"):
- * action ids above the frozen Moebius dialect. Extension frames flow
- * ONLY between caps-aware peers; the server down-converts every
- * mutation for vanilla clients and spectators, so a mixed room stays
- * coherent (vanilla sees the nearest cp437/16-color cell, never a
- * crash, never an unknown shape). Transport-free like moebius.ts: the
- * browser worker, the Bun server, and the tests share this file.
+ * teXt0wnz collab extension suite v1 (cap "t0wnz-ext-1"): action ids
+ * above the frozen Moebius dialect; wire shapes are specified in
+ * docs/collab-protocol-migration.md. Extension frames flow ONLY
+ * between caps-aware peers; the server down-converts every mutation
+ * for vanilla clients and spectators, so a mixed room stays coherent
+ * (vanilla sees the nearest cp437/16-color cell, never a crash, never
+ * an unknown shape). Transport-free like moebius.ts: the browser
+ * worker, the Bun server, and the tests share this file.
  *
- * Wire shapes (JSON data fields; client->server frames carry data.id
- * per the vanilla convention):
- * - EXT_DRAW 23       {x, y, u, a, fg, bg, id}: one full-fidelity
- *   cell. u = unicode codepoint, a = glyph attr byte (bit 0 blink,
- *   bit 1 reserved), fg/bg = v3 color words (bit 31 set = palette
- *   index, clear = 0x00RRGGBB).
- * - EXT_DRAW_BATCH 24 {cells: [{x,y,u,a,fg,bg}...], id}: one op, one
- *   seq, length-capped at EXT_BATCH_LIMIT. Vanilla peers receive it
- *   as per-cell DRAW frames.
- * - EXT_SYNC 25       client->server {} requests a sync; the server
- *   replies {seq, columns, rows, cells, palette} where cells is
- *   ExtRun[] ([u, a, fg, bg, count] with count >= 1, NOT the vanilla
- *   repeat+1 quirk) and palette is <=256 0x00RRGGBB words. The client
- *   replaces its doc wholesale.
- * - EXT_PALETTE 26    {palette: number[], id}: full-palette swap,
- *   <=256 0x00RRGGBB words. The first 16 entries also update the
- *   vanilla join palette (late vanilla joiners see them; in-session
- *   vanilla peers keep a stale palette, upstream's own precedent).
- * - EXT_ACK 27        server->sender {seq} for every accepted
- *   mutation from a caps client. With exclude-sender echo semantics
- *   the sender never sees its own broadcasts, so acks keep its seq
- *   stream contiguous; any gap means a missed op => request EXT_SYNC.
- *
- * seq is a per-room monotonic counter over accepted doc mutations.
- * Caps clients receive it on every mutation broadcast (an extra field
- * vanilla never sees); contiguity is the divergence detector that the
- * vanilla dialect lacks.
+ * - EXT_PALETTE's first 16 entries also update the vanilla join
+ *   palette (late vanilla joiners see them; in-session vanilla peers
+ *   keep a stale palette, upstream's own precedent).
+ * - seq contiguity is the divergence detector the vanilla dialect
+ *   lacks. The server excludes the sender from its own broadcasts, so
+ *   EXT_ACK keeps the sender's seq stream contiguous; any gap means a
+ *   missed op => request EXT_SYNC.
  */
 
 import {
+	FONT_SLOT_CLASSIC,
+	FONT_SLOT_UNSCII,
 	MAX_DOC_CELLS,
 	attrsOf,
 	createDefaultPaletteRGB,
@@ -47,6 +30,7 @@ import {
 	paletteColor,
 	paletteIndexOf,
 	type DocV3,
+	type GlyphTable,
 } from '../doc.js';
 import { quantizeColorWord } from '../convert.js';
 import { cp437ToUnicode, unicodeToCp437 } from '../cp437.js';
@@ -60,10 +44,8 @@ export const T0wnzAction = Object.freeze({
 	EXT_PALETTE: 26,
 	EXT_ACK: 27,
 	/**
-	 * client->server {} requests; server->client {columns, rows, cells,
-	 * ops, palette}: the baseline snapshot (absorbing ops the bounded
-	 * log evicted) plus the op log, the timelapse substrate. The client
-	 * replays it into an animation.
+	 * reply: the baseline snapshot (absorbing ops the bounded log
+	 * evicted) plus the op log
 	 */
 	EXT_TIMELAPSE: 28,
 });
@@ -75,7 +57,10 @@ export const EXT_SUITE_CAP = 't0wnz-ext-1';
 export const EXT_BATCH_LIMIT = 4096;
 
 export interface ExtCell {
-	/** unicode codepoint (cp437 glyphs travel as their codepoints) */
+	/**
+	 * unicode codepoint; a CP437 glyph travels as its codepoint, except
+	 * NUL, which travels as U+0000 (see cp437ToExtCodepoint)
+	 */
 	u: number;
 	/** glyph attr byte: bit 0 blink, bit 1 reserved (wide continuation) */
 	a: number;
@@ -90,7 +75,7 @@ export interface ExtDraw extends ExtCell {
 	y: number;
 }
 
-/** [u, a, fg, bg, count] with count >= 1 */
+/** [u, a, fg, bg, count] with count >= 1, NOT the vanilla repeat+1 quirk */
 export type ExtRun = [number, number, number, number, number];
 
 export const isValidCodepoint = (u: unknown): u is number =>
@@ -100,6 +85,57 @@ export const isValidCodepoint = (u: unknown): u is number =>
 	// surrogate halves are not characters; reject at the border like
 	// the utf8 codec does
 	((u as number) < 0xd800 || (u as number) > 0xdfff);
+
+/**
+ * CP437 maps both 0 and 255 to NBSP, so a codepoint alone cannot tell
+ * the empty NUL cell from 255. NUL takes U+0000 on the wire, and an
+ * NBSP always names 255.
+ */
+export const cp437ToExtCodepoint = (byte: number): number =>
+	byte === 0 ? 0 : cp437ToUnicode(byte);
+
+/**
+ * Printable ASCII names its own byte here, as it does for paste, so a
+ * peer's typed text lands in the session font rather than a fallback
+ * one, and saves as itself instead of '?'.
+ */
+export const extCodepointToCp437 = (u: number): number | undefined =>
+	u === 0 ? 0 : unicodeToCp437(u);
+
+/** a classic glyph travels by its byte, so NUL and 255 stay apart */
+export const glyphToExtCodepoint = (
+	table: GlyphTable,
+	glyphId: number,
+): number => {
+	const def = table.get(glyphId);
+	if (!def) {
+		return glyphId <= 0xff ? cp437ToExtCodepoint(glyphId) : 63;
+	}
+	return glyphId <= 0xff &&
+		def.fontSlot === FONT_SLOT_CLASSIC &&
+		def.codepoint === cp437ToUnicode(glyphId)
+		? cp437ToExtCodepoint(glyphId)
+		: def.codepoint;
+};
+
+/**
+ * Ids 0-255 of every doc's table are the CP437 page, so a CP437
+ * codepoint lands on its byte. The rest intern under unscii, as the
+ * ANSI decoder's do. The slot is only a preference, and the renderer
+ * falls back to Unifont where unscii lacks a glyph, while the classic
+ * slot has no unicode font to draw from at all.
+ */
+export const extCodepointToGlyphId = (table: GlyphTable, u: number): number => {
+	const byte = extCodepointToCp437(u);
+	if (byte !== undefined) {
+		return byte;
+	}
+	try {
+		return table.idFor(FONT_SLOT_UNSCII, u);
+	} catch {
+		return 63; // a full table degrades to '?'
+	}
+};
 
 /**
  * Canonicalize a color word at the trust border: palette-index words
@@ -188,7 +224,7 @@ export const extCellToBlock = (
 	iceColors: boolean,
 	palette: Uint32Array,
 ): MoebiusBlock => {
-	const code = unicodeToCp437(cell.u) ?? 63; // '?'
+	const code = extCodepointToCp437(cell.u) ?? 63; // '?'
 	const doc = { palette };
 	const blink = (cell.a & 1) !== 0 && !iceColors;
 	const fg = quantizeColorWord(cell.fg, doc, 16);
@@ -209,7 +245,7 @@ export const blockToExtCell = (
 	if (block.ext) {
 		return block.ext;
 	}
-	const raw = block.code <= 0xff ? cp437ToUnicode(block.code) : block.code;
+	const raw = block.code <= 0xff ? cp437ToExtCodepoint(block.code) : block.code;
 	return {
 		// a non-character here (icy-style surrogate smuggled past a lax
 		// border) would make every later expandExtCells THROW and leave
@@ -220,8 +256,6 @@ export const blockToExtCell = (
 		bg: paletteColor(block.bg & 0xff),
 	};
 };
-
-// --------------------------------------------------------- sync RLE
 
 export const compressExtCells = (cells: ExtCell[]): ExtRun[] => {
 	const runs: ExtRun[] = [];
@@ -278,25 +312,17 @@ export const expandExtCells = (
 export const extCellEquals = (a: ExtCell, b: ExtCell): boolean =>
 	a.u === b.u && a.a === b.a && a.fg === b.fg && a.bg === b.bg;
 
-// --------------------------------------------------------- doc bridge
-
 /**
  * Write full-fidelity cells into a v3 doc frame (persistence: the
  * room's .0wnz envelope keeps the real art, not the vanilla
- * projection). Glyphs intern through the table; a full table degrades
- * to '?' like the utf8 reader.
+ * projection).
  */
 export const applyExtCells = (doc: DocV3, cells: ExtCell[]): void => {
 	const frame = doc.frames[0];
 	const count = Math.min(cells.length, frame.glyph.length);
 	for (let i = 0; i < count; i++) {
 		const cell = cells[i];
-		let glyphId: number;
-		try {
-			glyphId = doc.glyphTable.idFor(0, cell.u);
-		} catch {
-			glyphId = 63; // '?'
-		}
+		const glyphId = extCodepointToGlyphId(doc.glyphTable, cell.u);
 		frame.glyph[i] = glyphWord(glyphId, cell.a);
 		frame.fg[i] = cell.fg >>> 0;
 		frame.bg[i] = cell.bg >>> 0;
@@ -308,10 +334,8 @@ export const docToExtCells = (doc: DocV3, frameIndex = 0): ExtCell[] => {
 	const frame = doc.frames[frameIndex];
 	const out: ExtCell[] = new Array(frame.glyph.length);
 	for (let i = 0; i < frame.glyph.length; i++) {
-		const glyphId = glyphIdOf(frame.glyph[i]);
-		const def = doc.glyphTable.get(glyphId);
 		out[i] = {
-			u: def?.codepoint ?? (glyphId <= 0xff ? cp437ToUnicode(glyphId) : 63),
+			u: glyphToExtCodepoint(doc.glyphTable, glyphIdOf(frame.glyph[i])),
 			a: attrsOf(frame.glyph[i]),
 			fg: normalizeColorWord(frame.fg[i]) ?? 0,
 			bg: normalizeColorWord(frame.bg[i]) ?? 0,

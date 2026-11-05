@@ -14,10 +14,9 @@ import {
 /**
  * Applies engine stamp output to the document: additive contact
  * merges, bg preservation, and tip/root junction voicing. Shared by
- * the freehand brush and the line tool, whose straight strokes earn
- * the same joins. commit() writes to the canvas; preview() runs the
- * identical pipeline and captures the writes instead, so a ghost can
- * be pixel-faithful to what a commit would produce.
+ * the freehand brush and the ruled shape tools, whose strokes earn the
+ * same joins. preview() runs the identical pipeline as commit() but
+ * captures the writes, so a ghost is pixel-faithful to its commit.
  */
 const createAsciiStrokePainter = () => {
 	// what each touched cell held BEFORE this stroke: additive contact
@@ -127,12 +126,11 @@ const createAsciiStrokePainter = () => {
 	// glyph; at 1x zoom the pen rarely stops on the exact cell, so the
 	// probe forgives a near miss by one cell on either side. meta is
 	// the approach: the tip's own for endings, the negated departure
-	// for a stroke that STARTED against the line. allowBack enables
-	// snap-back for both ends: one step behind in meta terms is the
-	// crossed cell, which for the root is the stroke's second cell, so
-	// a touch down that overshot through a line by one leaves no
-	// whisker either
-	const tipJunction = (cell, meta, allowBack, fg, draw, columns, rows) => {
+	// for a stroke that STARTED against the line. Snap-back serves both
+	// ends: one step behind in meta terms is the crossed cell, which for
+	// the root is the stroke's second cell, so a touch down that
+	// overshot through a line by one leaves no whisker either
+	const tipJunction = (cell, meta, fg, draw, columns, rows) => {
 		const { dx, dy } = meta;
 		// junction writes register like any other stroke write: a later
 		// cell revisiting one must merge against the real canvas content
@@ -175,15 +173,13 @@ const createAsciiStrokePainter = () => {
 		// step behind the tip becomes the join and the whisker cell is
 		// restored to what it held before the stroke. two or more cells
 		// past stays a deliberate crossing
-		if (allowBack) {
-			const held = strokeOriginals.get((cell.y - dy) * 65536 + (cell.x - dx));
-			if (held !== undefined && joinAt(cell.x - dx, cell.y - dy)) {
-				const tip = strokeOriginals.get(cell.y * 65536 + cell.x);
-				if (tip !== undefined) {
-					draw(tip.charCode, tip.fg, tip.bg, cell.x, cell.y);
-				}
-				return true;
+		const held = strokeOriginals.get((cell.y - dy) * 65536 + (cell.x - dx));
+		if (held !== undefined && joinAt(cell.x - dx, cell.y - dy)) {
+			const tip = strokeOriginals.get(cell.y * 65536 + cell.x);
+			if (tip !== undefined) {
+				draw(tip.charCode, tip.fg, tip.bg, cell.x, cell.y);
 			}
+			return true;
 		}
 		// stopped one short: join where the path would have continued
 		if (joinAt(cell.x + dx, cell.y + dy)) {
@@ -233,7 +229,7 @@ const createAsciiStrokePainter = () => {
 		for (const cell of cells) {
 			if (
 				cell.tip &&
-				tipJunction(cell, cell.tip, true, fg, draw, columns, rows)
+				tipJunction(cell, cell.tip, fg, draw, columns, rows)
 			) {
 				continue;
 			}
@@ -242,7 +238,6 @@ const createAsciiStrokePainter = () => {
 				tipJunction(
 					cell,
 					{ dx: -cell.root.dx, dy: -cell.root.dy, cls: cell.root.cls },
-					true,
 					fg,
 					draw,
 					columns,
@@ -393,8 +388,8 @@ const createAsciiBrushController = () => {
 		document.removeEventListener('onTextCanvasDown', canvasDown);
 		document.removeEventListener('onTextCanvasUp', canvasUp);
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
-		// a mid-drag switch plus Escape return used to feed engine.move()
-		// into the abandoned stroke with no fresh undo group
+		// a mid-drag switch plus Escape return would otherwise feed
+		// engine.move() into the abandoned stroke with no fresh undo group
 		stroking = false;
 		nav.classList.remove('enabled');
 	};

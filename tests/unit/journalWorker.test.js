@@ -1,10 +1,8 @@
 /**
- * journalWorker message handler guard: the flagged CodeQL surface
- * (js/missing-origin-check). OPFS sync-access handles do not exist in
- * jsdom, so these tests stub `self` to capture the handler and prove
- * the guard drops untrusted or malformed messages silently while
- * same-context messages still reach the op table (and get a reply,
- * here an error reply because init cannot find OPFS).
+ * journalWorker's message guard (CodeQL js/missing-origin-check).
+ * jsdom has no OPFS sync-access handles, so `self` is stubbed to
+ * capture the handler, and a same-context message gets an error reply
+ * because init cannot find OPFS.
  */
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 
@@ -52,5 +50,52 @@ describe('journal worker handler guard', () => {
 			ok: false,
 			error: 'no opfs in jsdom',
 		});
+	});
+});
+
+describe('journal worker setup', () => {
+	it('retries on the next call after a failure, letting go of the handles it opened', async () => {
+		// one sync-access handle per file at a time, as OPFS locks them;
+		// another tab holds journal.a until it closes
+		const open = new Set();
+		let lockedElsewhere = 'journal.a';
+		const syncHandle = async name => {
+			if (open.has(name) || name === lockedElsewhere) {
+				throw new Error(`NoModificationAllowedError: ${name}`);
+			}
+			open.add(name);
+			let bytes = new Uint8Array(0);
+			return {
+				getSize: () => bytes.length,
+				read: (out, { at }) => out.set(bytes.subarray(at, at + out.length)),
+				write: (data, { at }) => {
+					const grown = new Uint8Array(Math.max(bytes.length, at + data.length));
+					grown.set(bytes);
+					grown.set(data, at);
+					bytes = grown;
+				},
+				truncate: size => {
+					bytes = bytes.slice(0, size);
+				},
+				flush: () => {},
+				close: () => open.delete(name),
+			};
+		};
+		const root = { getFileHandle: async name => ({ createSyncAccessHandle: () => syncHandle(name) }) };
+		vi.stubGlobal('navigator', { storage: { getDirectory: async () => root } });
+		fakeSelf.postMessage.mockClear();
+
+		await fakeSelf.onmessage({ origin: '', data: { id: 4, op: 'read' } });
+		expect(fakeSelf.postMessage).toHaveBeenLastCalledWith({
+			id: 4,
+			ok: false,
+			error: 'NoModificationAllowedError: journal.a',
+		});
+		lockedElsewhere = null;
+		await fakeSelf.onmessage({ origin: '', data: { id: 5, op: 'read' } });
+		expect(fakeSelf.postMessage).toHaveBeenLastCalledWith(
+			{ id: 5, ok: true, bytes: new Uint8Array(0) },
+			expect.any(Array),
+		);
 	});
 });

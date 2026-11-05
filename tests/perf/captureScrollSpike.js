@@ -1,7 +1,6 @@
 /**
- * Capture desktop-Chromium numbers for the scroll spike
- * by driving the in-app spike (src/js/client/scrollSpike.js, ?spike) with
- * Playwright.
+ * Capture desktop-Chromium numbers for the scroll spike by driving the
+ * in-app spike (src/js/client/scrollSpike.js, ?spike) with Playwright.
  *
  * Usage:
  *   bun bake                 # the spike runs against the production build
@@ -9,8 +8,8 @@
  *
  * Numbers are machine-dependent snapshots recorded WITH a hardware
  * descriptor; they are evidence for parameter choices, not a CI gate.
- * Device runs are owner handoffs: open <app>/?spike on the device, fling by
- * hand and/or press "run scripted flings".
+ * Device runs are manual: open <app>/?spike on the device, fling by hand
+ * and/or press "run scripted flings".
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';

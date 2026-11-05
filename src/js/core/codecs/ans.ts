@@ -1,6 +1,6 @@
 /**
  * ANSI (.ans/.diz/.nfo/.txt) codec, CP437 and the lenient UTF-8 reader.
- * Faithful port of the v2 loadAnsi/encodeANSi pair, quirks preserved on
+ * Port of the v2 loadAnsi/encodeANSi pair; these v2 quirks stay on
  * purpose (they define compatibility):
  * - 25-row virtual screen: y caps at 25 and the screen scrolls
  *   (topOfScreen), cursor-up/down clamp inside the window.
@@ -8,19 +8,14 @@
  * - Cursor-forward at the right edge wraps first (v2 'C' behavior).
  * - EL ('K') clears with attribute 0 from the cursor to EOL.
  *
- * The UTF-8 read builds v3 planes natively: codepoints hit the strict
- * CP437 reverse map first and intern into the doc glyph table
- * otherwise, extended SGR (90-97/100-107, 38/48;5;n, 38/48;2;r;g;b)
- * lands as tag-bit color words, and one LF immediately after an
- * auto-wrap is swallowed (real terminals defer the wrap, so full-width
- * rows plus LF mean one row, not two). Everything the v2 reader
- * accepted still decodes (old-file leniency).
+ * The UTF-8 read builds v3 planes natively: codepoints hit the CP437
+ * reverse map first and intern into the doc glyph table otherwise, and
+ * extended SGR (90-97/100-107, 38/48;5;n, 38/48;2;r;g;b) lands as
+ * tag-bit color words. Everything the v2 reader accepted still decodes
+ * (old-file leniency).
  *
- * encodeUtf8 is the v3 UTF-8 writer: one cell per column, LF endings,
- * SGR per color tier, ice-vs-blink per the artist's toggle (ice
- * default), SAUCE appended with the artist's meta verbatim (nothing
- * auto-added). encodeAns keeps the byte-compatible v2 CP437/plain-text
- * paths.
+ * encodeAns is the byte-compatible v2 CP437 writer; encodeUtf8 writes
+ * UTF-8 and plain text.
  */
 
 import {
@@ -37,9 +32,9 @@ import {
 	paletteIndexOf,
 	rgbColor,
 } from '../doc.js';
-import { u16ToV3, v3ToU16, v3ToU16Lossy } from '../convert.js';
+import { u16ToV3, v3ToU16Lossy } from '../convert.js';
 import { cp437ToUnicode, unicodeToCp437 } from '../cp437.js';
-import { buildSauce, parseSauce } from './sauce.js';
+import { buildSauce, commentText, parseSauce } from './sauce.js';
 import { CodecError, concatBytes, utf8Encode } from './util.js';
 import { DecodeResult, DocMeta } from './bin.js';
 
@@ -135,14 +130,19 @@ const decodeUtf8At = (
 	return fail('invalid UTF-8 byte sequence');
 };
 
-/** Growable screen buffer, v2 ScreenData port (cells as u16 words). */
+/**
+ * Growable screen buffer, v2 ScreenData port (cells as u16 words).
+ * Capacity starts empty and grows on the first write: decodeAns builds
+ * this and the v3 screen but renders into one, and at a 65535-column
+ * SAUCE width the idle one would cost tens of megabytes up front.
+ */
 const createScreen = (width: number) => {
-	let cells = new Uint16Array(width * 100);
+	let cells = new Uint16Array(0);
 	let maxY = 0;
 	const extend = (y: number) => {
 		// hostile newline spam dies at the gate, not in the allocator;
 		// gate on content cells: the amortized allocation overshoots by
-		// up to double and refused legal tall files
+		// up to double and would refuse legal tall files
 		if (width * (y + 1) > MAX_DOC_CELLS) {
 			throw new CodecError('ANSI content exceeds the cell ceiling');
 		}
@@ -158,7 +158,7 @@ const createScreen = (width: number) => {
 	};
 	return {
 		reset: () => {
-			cells = new Uint16Array(width * 100);
+			cells = new Uint16Array(0);
 			maxY = 0;
 		},
 		set: (x: number, y: number, charCode: number, fg: number, bg: number) => {
@@ -172,14 +172,19 @@ const createScreen = (width: number) => {
 			}
 		},
 		height: () => maxY + 1,
-		data: () => cells.slice(0, width * (maxY + 1)),
+		data: () => {
+			const out = new Uint16Array(width * (maxY + 1));
+			out.set(cells.subarray(0, out.length));
+			return out;
+		},
 	};
 };
 
 /**
  * Growable v3-plane screen for the UTF-8 reader. Mirrors createScreen's
- * geometry quirks exactly (NaN cursor writes no-op, maxY tracks height)
- * but stores full glyph words and tag-bit color words.
+ * geometry quirks exactly (NaN cursor writes no-op, maxY tracks height,
+ * empty until the first write) but stores full glyph words and tag-bit
+ * color words.
  */
 const createV3Screen = (width: number) => {
 	const BLANK = paletteColor(0);
@@ -188,7 +193,7 @@ const createV3Screen = (width: number) => {
 		fg: new Uint32Array(cells).fill(BLANK),
 		bg: new Uint32Array(cells).fill(BLANK),
 	});
-	let planes = alloc(width * 100);
+	let planes = alloc(0);
 	let maxY = 0;
 	const extend = (y: number) => {
 		// same gate as createScreen: hostile growth dies loud, legal
@@ -208,7 +213,7 @@ const createV3Screen = (width: number) => {
 	};
 	return {
 		reset: () => {
-			planes = alloc(width * 100);
+			planes = alloc(0);
 			maxY = 0;
 		},
 		set: (x: number, y: number, glyph: number, fg: number, bg: number) => {
@@ -225,12 +230,11 @@ const createV3Screen = (width: number) => {
 		},
 		height: () => maxY + 1,
 		planes: () => {
-			const cells = width * (maxY + 1);
-			return {
-				glyph: planes.glyph.slice(0, cells),
-				fg: planes.fg.slice(0, cells),
-				bg: planes.bg.slice(0, cells),
-			};
+			const out = alloc(width * (maxY + 1));
+			out.glyph.set(planes.glyph.subarray(0, out.glyph.length));
+			out.fg.set(planes.fg.subarray(0, out.fg.length));
+			out.bg.set(planes.bg.subarray(0, out.bg.length));
+			return out;
 		},
 	};
 };
@@ -246,11 +250,12 @@ export const decodeAns = (
 	const isUTF8 = options.utf8 ?? false;
 	const sauce = parseSauce(bytes);
 	// v2 getSauce is format-agnostic: a BinaryText record even on an .ans
-	// derives width from FileType; zero means unspecified either way
+	// derives width from FileType; 0 and 1 mean unspecified like
+	// decodeBin's, and a zero TInfo1 too
 	let columns = DEFAULT_ANSI_COLUMNS;
 	if (sauce) {
 		if (sauce.dataType === 5) {
-			if (sauce.fileType > 0) {
+			if (sauce.fileType > 1) {
 				columns = sauce.fileType * 2;
 			}
 		} else if (sauce.tInfo1 > 0) {
@@ -259,7 +264,7 @@ export const decodeAns = (
 	}
 	const size = sauce ? sauce.payloadSize : bytes.length;
 	// ESC[?33h/l can override the SAUCE flag mid-stream (Pablo honors
-	// it; SAUCE-less ice ANSIs rendered blink here before)
+	// it), so SAUCE-less ice ANSIs do not render as blink
 	let iceColors = sauce?.iceColors ?? false;
 	// ESC[?7l pins the cursor at the right edge instead of wrapping
 	let autowrap = true;
@@ -304,16 +309,18 @@ export const decodeAns = (
 	let bold = false;
 	let blink = false;
 	let inverse = false;
-	// UTF-8 extensions (never parsed in CP437 mode, which stays v2-exact):
-	// 90-97/100-107 bright flags and 38/48 extended color words
+	// UTF-8 only (the CP437 SGR set stays v2's): 90-97/100-107 bright
+	// flags and 38/48 extended color words
 	let fgBright = false;
 	let bgBright = false;
 	let fgExt: number | null = null;
 	let bgExt: number | null = null;
-	// one LF immediately after an auto-wrap is swallowed (UTF-8 only):
-	// real terminals defer the wrap, so full-width rows + LF (the v2
-	// writer's output and encodeUtf8's) mean ONE row, not two
+	// the first LF after an auto-wrap is swallowed (UTF-8 only): real
+	// terminals defer the wrap, so full-width rows + LF (the v2 writer's
+	// output and encodeUtf8's) mean ONE row, not two. ESC[s keeps the
+	// pending wrap with the cursor, so ESC[u brings it back
 	let wrappedPending = false;
+	let savedWrap = false;
 
 	const resetAttributes = () => {
 		foreground = DEFAULT_FOREGROUND;
@@ -338,10 +345,15 @@ export const decodeAns = (
 	};
 	const setPos = (newX: number, newY: number) => {
 		x = Math.min(columns, Math.max(1, newX));
-		// 25 is the bottom of the scroll window (newLine agrees); v2's 26
-		// let ESC[26;..H escape it and a later ESC[1B snapped the cursor
-		// up over painted rows. PabloDraw clamps to the canvas rect.
-		y = Math.min(25, Math.max(1, newY));
+		// a row past the 25-row window scrolls it, as newLine does, and
+		// lands where moebiusXBIN (ansi.js, Screen.move) puts it: a clamp
+		// at 25 overwrites the row above, and a cursor left at 26 lets a
+		// later ESC[1B snap up over painted rows
+		y = Math.max(1, newY);
+		if (y > 25) {
+			topOfScreen += y - 25;
+			y = 25;
+		}
 	};
 	const getValues = (missing = 1): number[] =>
 		escapeCode
@@ -488,10 +500,10 @@ export const decodeAns = (
 			bytesConsumed = decoded.bytesConsumed;
 			codepoint = decoded.charCode;
 			// dispatch value for the state machine (controls are ASCII);
-			// the cell write below uses the real codepoint instead. The
-			// old strict reverse map here turned printable glyphs that
-			// LIVE on cp437 control bytes (U+25D9 is 0x0A) into controls,
-			// so moebiusXBIN's own UTF-8 exports corrupted on open
+			// the cell write below uses the real codepoint. No reverse
+			// map here: printable glyphs that LIVE on cp437 control bytes
+			// (U+25D9 is 0x0A) would turn into controls and corrupt
+			// moebiusXBIN's own UTF-8 exports on open
 			code = decoded.charCode <= 0x7f ? decoded.charCode : 63;
 		}
 
@@ -499,18 +511,23 @@ export const decodeAns = (
 			escapeCode += String.fromCharCode(code);
 			if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
 				escaped = false;
-				// an empty SGR param means 0 (ESC[m resets; PabloDraw,
-				// moebiusXBIN, and ANSI.SYS agree); cursor moves default 1
-				const values = getValues(
-					escapeCode.charAt(escapeCode.length - 1) === 'm' ? 0 : 1,
-				);
+				const final = escapeCode.charAt(escapeCode.length - 1);
+				// an empty SGR param means 0, the ECMA-48 §8.3.117 default
+				// (ESC[m resets; PabloDraw, moebiusXBIN, and ANSI.SYS agree);
+				// cursor moves default 1
+				const values = getValues(final === 'm' ? 0 : 1);
 				if (escapeCode.charAt(0) === '[') {
-					// every CSI except SGR moves or edits, ending a deferred
-					// wrap; SGR between a wrap and its LF must not
-					if (escapeCode.charAt(escapeCode.length - 1) !== 'm') {
+					// only a cursor move ends a deferred wrap. durdraw
+					// (durdraw_ansiparse.py, parse_ansi_escape_codes) wraps
+					// at the next glyph, so SGR, PabloDraw t, ESC[s, EL, and
+					// mode sets between a full row and its LF leave one row.
+					// PabloDraw (Ansi.load.cs, AnsiLoader.ReadChar) and
+					// moebiusXBIN (ansi.js, Screen.put) wrap at the glyph and
+					// never defer, like the CP437 read
+					if ('ABCDHf'.includes(final) || (final === 'J' && values[0] === 2)) {
 						wrappedPending = false;
 					}
-					switch (escapeCode.charAt(escapeCode.length - 1)) {
+					switch (final) {
 						case 'A':
 							y = Math.max(1, y - values[0]);
 							break;
@@ -527,8 +544,8 @@ export const decodeAns = (
 							x = Math.max(1, x - values[0]);
 							break;
 						case 'H':
-						// HVP: ANSI.SYS and both references alias it to CUP;
-						// v2 dropped it on the floor
+						// HVP: ANSI.SYS, PabloDraw, and moebiusXBIN all alias
+						// it to CUP
 						case 'f':
 							if (values.length === 1) {
 								setPos(1, values[0]);
@@ -606,7 +623,7 @@ export const decodeAns = (
 							// ?7 autowrap (moebiusXBIN ignores both)
 							if (escapeCode.charAt(1) === '?') {
 								const mode = parseInt(escapeCode.slice(2), 10);
-								const enable = escapeCode.charAt(escapeCode.length - 1) === 'h';
+								const enable = final === 'h';
 								if (mode === 33) {
 									iceColors = enable;
 								} else if (mode === 7) {
@@ -640,10 +657,12 @@ export const decodeAns = (
 						case 's':
 							savedX = x;
 							savedY = y;
+							savedWrap = wrappedPending;
 							break;
 						case 'u':
 							x = savedX;
 							y = savedY;
+							wrappedPending = savedWrap;
 							break;
 					}
 				}
@@ -762,7 +781,7 @@ export const decodeAns = (
 					title: sauce.title,
 					author: sauce.author,
 					group: sauce.group,
-					comments: sauce.comments.join('\n'),
+					comments: commentText(sauce.comments),
 					fontName: sauce.fontName,
 				}
 			: {},
@@ -771,15 +790,8 @@ export const decodeAns = (
 };
 
 export interface EncodeAnsOptions {
-	utf8?: boolean;
-	/** UTF-8 only: emit SGR 5 blink codes (v2 default true). */
-	blinkers?: boolean;
-	/** Plain-text export: no escape codes at all. */
-	stripEscapeCodes?: boolean;
 	/** Which doc frame to encode (ansimation reuses the body per frame). */
 	frameIndex?: number;
-	/** Quantize via the lossy projection instead of the strict one. */
-	lossy?: boolean;
 	/** Body only: no EOF byte, no SAUCE (ansimation assembles its own). */
 	bodyOnly?: boolean;
 	meta?: DocMeta;
@@ -787,34 +799,26 @@ export interface EncodeAnsOptions {
 }
 
 /**
- * v2 encodeANSi port from a v3 doc. CP437 output gets SAUCE appended
- * after a 0x1a; UTF-8/plain output gets none (v2 behavior; encodeUtf8
- * is the UTF-8 writer that carries SAUCE).
+ * v2 encodeANSi port from a v3 doc: CP437 bytes, then SAUCE after a
+ * 0x1a. Cells the 16-color model cannot hold go through the lossy
+ * projection, which the export modal's lint names first.
  */
 export const encodeAns = (
 	doc: DocV3,
 	options: EncodeAnsOptions = {},
 ): Uint8Array => {
-	const useUTF8 = options.utf8 ?? false;
-	const blinkers = options.blinkers ?? true;
-	const stripEscapeCodes = options.stripEscapeCodes ?? false;
-	const { imageData, columns, rows, iceColors } = (
-		options.lossy ? v3ToU16Lossy : v3ToU16
-	)(doc, options.frameIndex ?? 0);
+	const frameIndex = options.frameIndex ?? 0;
+	const { imageData, columns, rows, iceColors } = v3ToU16Lossy(doc, frameIndex);
 
-	const output: number[] = stripEscapeCodes ? [] : [27, 91, 48, 109];
+	const output: number[] = [27, 91, 48, 109];
 	let currentForeground = DEFAULT_FOREGROUND;
 	let currentBackground = DEFAULT_BACKGROUND;
 	let currentBold = false;
 	let currentBlink = false;
 	// 24-bit channels ride PabloDraw t sequences (ESC[1;r;g;bt fg,
 	// ESC[0;r;g;bt bg) over the quantized SGR base, so t-aware readers
-	// keep the truecolor and everyone else degrades to the 16c view.
-	// Only the lossy projection can reach cells with RGB plane words
-	// (the strict one throws), and classic CP437 output alone carries
-	// them (the UTF-8 writer already speaks 38;2).
-	const planeFrame = doc.frames[options.frameIndex ?? 0];
-	const emitRgb = !useUTF8 && !stripEscapeCodes && planeFrame !== undefined;
+	// keep the truecolor and everyone else degrades to the 16c view
+	const planeFrame = doc.frames[frameIndex];
 	let currentRgbFg: number | null = null;
 	let currentRgbBg: number | null = null;
 	const tSequence = (channel: number, word: number): number[] => {
@@ -873,52 +877,48 @@ export const encodeAns = (
 			}
 
 			const cellIndex = row * columns + col;
-			const rawFg = emitRgb ? planeFrame.fg[cellIndex] >>> 0 : 0;
-			const rawBg = emitRgb ? planeFrame.bg[cellIndex] >>> 0 : 0;
-			const fgIsRgb = emitRgb && !isPaletteColor(rawFg);
-			const bgIsRgb = emitRgb && !isPaletteColor(rawBg);
-			if (!stripEscapeCodes) {
-				if ((lineBold && !bold) || (lineBlink && !blink)) {
-					attribs.push([48]); // 0: reset
-					lineForeground = DEFAULT_FOREGROUND;
-					lineBackground = DEFAULT_BACKGROUND;
-					lineBold = false;
-					lineBlink = false;
-					lineRgbFg = null;
-					lineRgbBg = null;
-				}
-				if (bold && !lineBold) {
-					attribs.push([49]); // 1: bold
-					lineBold = true;
-				}
-				if (blink && !lineBlink) {
-					if (!useUTF8 || blinkers) {
-						attribs.push([53]); // 5: blink
-					}
-					lineBlink = true;
-				}
-				if (foreground !== lineForeground) {
-					attribs.push([51, 48 + ansiColor(foreground)]);
-					lineForeground = foreground;
-				} else if (lineRgbFg !== null && !fgIsRgb) {
-					// leaving a 24-bit channel needs an explicit SGR even
-					// when the quantized value matches the line state, or
-					// t-aware readers keep painting RGB
-					attribs.push([51, 48 + ansiColor(foreground)]);
-				}
-				if (background !== lineBackground) {
-					attribs.push([52, 48 + ansiColor(background)]);
-					lineBackground = background;
-				} else if (lineRgbBg !== null && !bgIsRgb) {
-					attribs.push([52, 48 + ansiColor(background)]);
-				}
-				if (attribs.length) {
-					lineOutput.push(27, 91);
-					attribs.forEach((attrib, index) => {
-						lineOutput = lineOutput.concat(attrib);
-						lineOutput.push(index === attribs.length - 1 ? 109 : 59);
-					});
-				}
+			const rawFg = planeFrame.fg[cellIndex] >>> 0;
+			const rawBg = planeFrame.bg[cellIndex] >>> 0;
+			const fgIsRgb = !isPaletteColor(rawFg);
+			const bgIsRgb = !isPaletteColor(rawBg);
+			if ((lineBold && !bold) || (lineBlink && !blink)) {
+				attribs.push([48]); // 0: reset
+				lineForeground = DEFAULT_FOREGROUND;
+				lineBackground = DEFAULT_BACKGROUND;
+				lineBold = false;
+				lineBlink = false;
+				lineRgbFg = null;
+				lineRgbBg = null;
+			}
+			if (bold && !lineBold) {
+				attribs.push([49]); // 1: bold
+				lineBold = true;
+			}
+			if (blink && !lineBlink) {
+				attribs.push([53]); // 5: blink
+				lineBlink = true;
+			}
+			if (foreground !== lineForeground) {
+				attribs.push([51, 48 + ansiColor(foreground)]);
+				lineForeground = foreground;
+			} else if (lineRgbFg !== null && !fgIsRgb) {
+				// leaving a 24-bit channel needs an explicit SGR even
+				// when the quantized value matches the line state, or
+				// t-aware readers keep painting RGB
+				attribs.push([51, 48 + ansiColor(foreground)]);
+			}
+			if (background !== lineBackground) {
+				attribs.push([52, 48 + ansiColor(background)]);
+				lineBackground = background;
+			} else if (lineRgbBg !== null && !bgIsRgb) {
+				attribs.push([52, 48 + ansiColor(background)]);
+			}
+			if (attribs.length) {
+				lineOutput.push(27, 91);
+				attribs.forEach((attrib, index) => {
+					lineOutput = lineOutput.concat(attrib);
+					lineOutput.push(index === attribs.length - 1 ? 109 : 59);
+				});
 			}
 
 			if (fgIsRgb && rawFg !== lineRgbFg) {
@@ -934,19 +934,9 @@ export const encodeAns = (
 				lineRgbBg = null;
 			}
 
-			if (useUTF8) {
-				lineOutput.push(...utf8Encode(cp437ToUnicode(charCode)));
-			} else {
-				lineOutput.push(charCode);
-			}
+			lineOutput.push(charCode);
 		}
 
-		if (useUTF8) {
-			if (!stripEscapeCodes) {
-				lineOutput.push(27, 91, 48, 109);
-			}
-			lineOutput.push(10);
-		}
 		for (const byte of lineOutput) {
 			output.push(byte);
 		}
@@ -958,17 +948,11 @@ export const encodeAns = (
 		currentRgbBg = lineRgbBg;
 	}
 
-	if (!stripEscapeCodes) {
-		output.push(27, 91, 48, 109);
-	}
+	output.push(27, 91, 48, 109);
 
 	const payload = new Uint8Array(output);
 	if (options.bodyOnly) {
 		return payload;
-	}
-	if (useUTF8 || stripEscapeCodes) {
-		// v2 appends a lone 0x1a ('' sauce) on UTF-8 saves; preserved
-		return useUTF8 ? concatBytes([payload, Uint8Array.of(0x1a)]) : payload;
 	}
 	const meta = options.meta ?? {};
 	const sauce = buildSauce({
@@ -994,9 +978,7 @@ export const encodeAns = (
 /**
  * Classic ansimation: clear once, then every frame homes the cursor
  * and repaints full-width; playback speed is the medium's (baud rate),
- * exactly like the scene's .ans animations. CP437 via the lossy
- * projection per frame; SAUCE marks Character/ANSiMation (dataType 1,
- * fileType 2).
+ * exactly like the scene's .ans animations.
  */
 export const encodeAnsimation = (
 	doc: DocV3,
@@ -1005,13 +987,13 @@ export const encodeAnsimation = (
 	const parts: Uint8Array[] = [Uint8Array.of(27, 91, 50, 74)]; // ESC[2J
 	for (let f = 0; f < doc.frames.length; f++) {
 		parts.push(Uint8Array.of(27, 91, 72)); // ESC[H
-		parts.push(encodeAns(doc, { frameIndex: f, lossy: true, bodyOnly: true }));
+		parts.push(encodeAns(doc, { frameIndex: f, bodyOnly: true }));
 	}
 	const payload = concatBytes(parts);
 	const meta = options.meta ?? {};
 	const sauce = buildSauce({
 		dataType: 1,
-		fileType: 2, // ANSiMation
+		fileType: 2, // SAUCE §FileType, Character/ANSiMation
 		fileSize: payload.length,
 		columns: doc.getColumns(),
 		rows: doc.getRows(),
@@ -1072,7 +1054,6 @@ export const encodeUtf8 = (
 			output.push(ch.charCodeAt(0));
 		}
 	};
-	/** emit ESC[...m from numeric params */
 	const pushSgr = (params: number[][]) => {
 		output.push(27, 91);
 		params.forEach((param, index) => {

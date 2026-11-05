@@ -1,222 +1,27 @@
 // @ts-check
-/* Color related methods */
 import State from './state.js';
 import { $ } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
 import { expand6to8 } from '../core/doc.js';
-
-/** @type {Map<number, number>} */
-const charCodeToUnicode = new Map([
-	[1, 0x263a],
-	[2, 0x263b],
-	[3, 0x2665],
-	[4, 0x2666],
-	[5, 0x2663],
-	[6, 0x2660],
-	[7, 0x2022],
-	[8, 0x25d8],
-	[9, 0x25cb],
-	[10, 0x25d9],
-	[11, 0x2642],
-	[12, 0x2640],
-	[13, 0x266a],
-	[14, 0x266b],
-	[15, 0x263c],
-	[16, 0x25ba],
-	[17, 0x25c4],
-	[18, 0x2195],
-	[19, 0x203c],
-	[20, 0x00b6],
-	[21, 0x00a7],
-	[22, 0x25ac],
-	[23, 0x21a8],
-	[24, 0x2191],
-	[25, 0x2193],
-	[26, 0x2192],
-	[27, 0x2190],
-	[28, 0x221f],
-	[29, 0x2194],
-	[30, 0x25b2],
-	[31, 0x25bc],
-	[127, 0x2302],
-	[128, 0x00c7],
-	[129, 0x00fc],
-	[130, 0x00e9],
-	[131, 0x00e2],
-	[132, 0x00e4],
-	[133, 0x00e0],
-	[134, 0x00e5],
-	[135, 0x00e7],
-	[136, 0x00ea],
-	[137, 0x00eb],
-	[138, 0x00e8],
-	[139, 0x00ef],
-	[140, 0x00ee],
-	[141, 0x00ec],
-	[142, 0x00c4],
-	[143, 0x00c5],
-	[144, 0x00c9],
-	[145, 0x00e6],
-	[146, 0x00c6],
-	[147, 0x00f4],
-	[148, 0x00f6],
-	[149, 0x00f2],
-	[150, 0x00fb],
-	[151, 0x00f9],
-	[152, 0x00ff],
-	[153, 0x00d6],
-	[154, 0x00dc],
-	[155, 0x00a2],
-	[156, 0x00a3],
-	[157, 0x00a5],
-	[158, 0x20a7],
-	[159, 0x0192],
-	[160, 0x00e1],
-	[161, 0x00ed],
-	[162, 0x00f3],
-	[163, 0x00fa],
-	[164, 0x00f1],
-	[165, 0x00d1],
-	[166, 0x00aa],
-	[167, 0x00ba],
-	[168, 0x00bf],
-	[169, 0x2310],
-	[170, 0x00ac],
-	[171, 0x00bd],
-	[172, 0x00bc],
-	[173, 0x00a1],
-	[174, 0x00ab],
-	[175, 0x00bb],
-	[176, 0x2591],
-	[177, 0x2592],
-	[178, 0x2593],
-	[179, 0x2502],
-	[180, 0x2524],
-	[181, 0x2561],
-	[182, 0x2562],
-	[183, 0x2556],
-	[184, 0x2555],
-	[185, 0x2563],
-	[186, 0x2551],
-	[187, 0x2557],
-	[188, 0x255d],
-	[189, 0x255c],
-	[190, 0x255b],
-	[191, 0x2510],
-	[192, 0x2514],
-	[193, 0x2534],
-	[194, 0x252c],
-	[195, 0x251c],
-	[196, 0x2500],
-	[197, 0x253c],
-	[198, 0x255e],
-	[199, 0x255f],
-	[200, 0x255a],
-	[201, 0x2554],
-	[202, 0x2569],
-	[203, 0x2566],
-	[204, 0x2560],
-	[205, 0x2550],
-	[206, 0x256c],
-	[207, 0x2567],
-	[208, 0x2568],
-	[209, 0x2564],
-	[210, 0x2565],
-	[211, 0x2559],
-	[212, 0x2558],
-	[213, 0x2552],
-	[214, 0x2553],
-	[215, 0x256b],
-	[216, 0x256a],
-	[217, 0x2518],
-	[218, 0x250c],
-	[219, 0x2588],
-	[220, 0x2584],
-	[221, 0x258c],
-	[222, 0x2590],
-	[223, 0x2580],
-	[224, 0x03b1],
-	[225, 0x00df],
-	[226, 0x0393],
-	[227, 0x03c0],
-	[228, 0x03a3],
-	[229, 0x03c3],
-	[230, 0x00b5],
-	[231, 0x03c4],
-	[232, 0x03a6],
-	[233, 0x0398],
-	[234, 0x03a9],
-	[235, 0x03b4],
-	[236, 0x221e],
-	[237, 0x03c6],
-	[238, 0x03b5],
-	[239, 0x2229],
-	[240, 0x2261],
-	[241, 0x00b1],
-	[242, 0x2265],
-	[243, 0x2264],
-	[244, 0x2320],
-	[245, 0x2321],
-	[246, 0x00f7],
-	[247, 0x2248],
-	[248, 0x00b0],
-	[249, 0x2219],
-	[250, 0x00b7],
-	[251, 0x221a],
-	[252, 0x207f],
-	[253, 0x00b2],
-	[254, 0x25a0],
-	[0, 0x00a0],
-	[255, 0x00a0],
-]);
-
-/** @param {number} charCode @returns {number} */
-const getUnicode = charCode => charCodeToUnicode.get(charCode) || charCode;
-
-/** @param {number} unicode @returns {number[]} UTF-8 byte sequence */
-const unicodeToArray = unicode => {
-	if (unicode < 0x80) {
-		return [unicode];
-	} else if (unicode < 0x800) {
-		return [(unicode >> 6) | 192, (unicode & 63) | 128];
-	}
-	return [
-		(unicode >> 12) | 224,
-		((unicode >> 6) & 63) | 128,
-		(unicode & 63) | 128,
-	];
-};
-
-/** @param {number} charCode @returns {number[]} UTF-8 byte sequence */
-const getUTF8 = charCode => unicodeToArray(getUnicode(charCode));
-
-const getUnicodeReverseMap = (() => {
-	/** @type {Map<number, number>} */
-	const map = new Map();
-	for (let charCode = 0; charCode <= 255; charCode++) {
-		map.set(getUnicode(charCode), charCode);
-	}
-	return map;
-})();
+import { createTouchHold } from './touchHold.js';
 
 /** @param {{r: number, g: number, b: number, a: number}} rgba @returns {number[]} */
 const rgbaToXbin = ({ r, g, b, a }) => [
-	// Ensure the values don't exceed 63
 	Math.min(r >> 2, 63),
 	Math.min(g >> 2, 63),
 	Math.min(b >> 2, 63),
-	a, // Alpha remains unchanged
+	a,
 ];
 
 /** @param {number[]} xbin 6-bit [r, g, b, a] @returns {number[]} */
 const xbinToRgba = ([r, g, b, a]) => [
-	// the canonical expansion lives in ONE place (doc.ts); the old
-	// round(v/63*255) inline twin differed by one LSB on ten of 64
-	// values, so a load, autosave, reload cycle shifted colors
+	// the canonical expansion lives in ONE place (doc.ts): an inline
+	// round(v/63*255) differs by one LSB on ten of 64 values, so a
+	// load, autosave, reload cycle would shift colors
 	expand6to8(r),
 	expand6to8(g),
 	expand6to8(b),
-	a, // Alpha remains unchanged
+	a,
 ];
 
 /** @param {string} hex @returns {{r: number, g: number, b: number, a: number}} */
@@ -348,9 +153,8 @@ const createPalette = RGB6Bit => {
 	const getPalette = () => RGBAColors;
 
 	return {
-		// conversion helpers stay module-internal (the module exports
-		// getUTF8/getUnicode for the writers); only hexToXbin is read
-		// off an instance (the custom color input)
+		// conversion helpers stay off the instance; only hexToXbin is
+		// read off one (the custom color input)
 		hexToXbin: hexToXbin,
 		getPalette: getPalette,
 		getRGBColor: getRGBColor,
@@ -404,16 +208,115 @@ const createPalettePreview = canvas => {
 		ctx.fillRect(0, offset, squareSize, squareSize);
 	};
 
-	canvas.getContext('2d')?.createImageData(canvas.width, canvas.height);
 	updatePreview();
 	document.addEventListener('onForegroundChange', updatePreview);
 	document.addEventListener('onBackgroundChange', updatePreview);
 	document.addEventListener('onPaletteChange', updatePreview);
 
-	return {
-		updatePreview: updatePreview,
-		setForegroundColor: updatePreview,
-		setBackgroundColor: updatePreview,
+	return { updatePreview: updatePreview };
+};
+
+/**
+ * Which color a swatch press picks, by the same buttons as Moebius
+ * palette.js, update_swatches(). The ctrl test reads the mouse event
+ * because Windows and Linux deliver a ctrl click as a plain left
+ * click, which no contextmenu listener ever sees
+ * @param {MouseEvent} e
+ * @returns {boolean|undefined} true for the background, false for the
+ * foreground, undefined for a button that picks neither
+ */
+const picksBackground = e =>
+	(e.button === 2 || e.ctrlKey ? true : e.button === 0 ? false : undefined);
+
+/**
+ * Binds swatches that pick on click, contextmenu, and a touch hold so
+ * each press picks once. A binder's swatches share one guard: some
+ * engines still send a click after a macOS ctrl click's contextmenu or
+ * a hold, and by then a pick that rebuilt its row has slid another
+ * swatch under the pointer
+ * @returns {(el: HTMLElement, pick: (bg?: boolean) => void) => void}
+ */
+const createSwatchBinder = () => {
+	const hold = createTouchHold();
+	let picked = false;
+	// the native long-press contextmenu that trails a hold, during it
+	// or after the lift, belongs to the same press
+	let held = false;
+	// iPadOS sends the click of a quick second tap, finger or Pencil, to
+	// where the first tap landed: another swatch, or off the swatches
+	// altogether, where it and the dblclick after it can shade a panel.
+	// The swatch the second tap pressed owns that click
+	/** @type {{el: HTMLElement, pick: (bg?: boolean) => void} | null} */
+	let press = null;
+	let redirected = false;
+	document.addEventListener(
+		'pointerdown',
+		() => {
+			press = null;
+			redirected = false;
+		},
+		true,
+	);
+	document.addEventListener(
+		'click',
+		e => {
+			if (!press || e.detail < 2 || press.el.contains(/** @type {Node} */ (e.target))) {
+				return;
+			}
+			e.preventDefault();
+			e.stopPropagation();
+			redirected = true;
+			if (!picked) {
+				picked = true;
+				press.pick(picksBackground(e));
+			}
+		},
+		true,
+	);
+	document.addEventListener(
+		'dblclick',
+		e => {
+			if (redirected) {
+				redirected = false;
+				e.preventDefault();
+				e.stopPropagation();
+			}
+		},
+		true,
+	);
+	return (el, pick) => {
+		el.addEventListener('pointerdown', e => {
+			picked = held = false;
+			if ((e.pointerType === 'touch' || e.pointerType === 'pen') && e.isPrimary) {
+				press = { el, pick };
+			}
+			hold.arm(e, () => {
+				picked = held = true;
+				pick(true);
+			});
+		});
+		el.addEventListener('pointermove', hold.move);
+		el.addEventListener('click', e => {
+			// a keyboard click (detail 0) has no pointerdown to clear the
+			// guard, so a menu key's pick would otherwise swallow it
+			if (!picked || !e.detail) {
+				pick(picksBackground(e));
+			}
+		});
+		el.addEventListener('contextmenu', e => {
+			// stopped as well, or a module's panel menu opens over the pick
+			e.preventDefault();
+			e.stopPropagation();
+			// a native long press that beats the timer picks through the
+			// hold, so held marks the press's one pick either way
+			hold.flush();
+			if (held) {
+				held = false;
+			} else {
+				picked = true;
+				pick(true);
+			}
+		});
 	};
 };
 
@@ -421,9 +324,17 @@ const createPalettePreview = canvas => {
 const createPalettePicker = canvas => {
 	/** @type {ImageData[]} */
 	const imageData = [];
-	const doubleTapThreshold = 300; // Time in ms to detect double-tap/click
+	const doubleTapThreshold = 300; // ms
 	let lastTouchTime = 0;
 	let lastMouseTime = 0;
+	// a double tap needs both taps on one color, or two quick picks of
+	// two colors open the editor for the second instead of picking it
+	let lastTouchIndex = -1;
+	let lastMouseIndex = -1;
+	const hold = createTouchHold();
+	// a press that held, wandered, met a second finger, or was
+	// cancelled lifts as neither a tap nor half of a double tap
+	let spent = false;
 	/** @type {HTMLInputElement|null} */
 	let cc = null;
 	let colorEdited = 0;
@@ -461,7 +372,6 @@ const createPalettePicker = canvas => {
 		if (!palette) {
 			return;
 		}
-		// Handle digit keys (0-7) with ctrl or alt modifiers
 		if (
 			e.code.startsWith('Digit') &&
 			['0', '1', '2', '3', '4', '5', '6', '7'].includes(e.code.slice(-1))
@@ -484,27 +394,26 @@ const createPalettePicker = canvas => {
 					palette.setBackgroundColor(num);
 				}
 			}
-			// ctrl + arrows
 		} else if (e.code.startsWith('Arrow') && e.ctrlKey) {
 			e.preventDefault();
 			let color;
 			switch (e.code) {
-				case 'ArrowLeft': // Ctrl+Left - Previous background color
+				case 'ArrowLeft':
 					color = palette.getBackgroundColor();
 					color = color === 0 ? 15 : color - 1;
 					palette.setBackgroundColor(color);
 					break;
-				case 'ArrowUp': // Ctrl+Up - Previous foreground color
+				case 'ArrowUp':
 					color = palette.getForegroundColor();
 					color = color === 0 ? 15 : color - 1;
 					palette.setForegroundColor(color);
 					break;
-				case 'ArrowRight': // Ctrl+Right - Next background color
+				case 'ArrowRight':
 					color = palette.getBackgroundColor();
 					color = color === 15 ? 0 : color + 1;
 					palette.setBackgroundColor(color);
 					break;
-				case 'ArrowDown': // Ctrl+Down - Next foreground color
+				case 'ArrowDown':
 					color = palette.getForegroundColor();
 					color = color === 15 ? 0 : color + 1;
 					palette.setForegroundColor(color);
@@ -516,20 +425,21 @@ const createPalettePicker = canvas => {
 	};
 
 	/**
-	 * @param {number} x
-	 * @param {number} y
+	 * @param {number} colorIndex
 	 * @param {boolean} isDoubleClick
-	 * @param {boolean} _isTouch
 	 */
-	const handleInteraction = (x, y, isDoubleClick, _isTouch) => {
+	const handleInteraction = (colorIndex, isDoubleClick) => {
 		const palette = State.palette;
 		if (!palette) {
 			return;
 		}
-		const colorIndex = y + (x === 0 ? 0 : 8);
 		if (isDoubleClick) {
 			if (cc !== null) {
 				cc.classList.remove('hide');
+				// Chrome for Android opens no picker for an input without a
+				// layout box, and the box would wait for the next frame unless
+				// a layout read builds it now
+				cc.getBoundingClientRect();
 				cc.value = palette.getRGBColor(colorIndex);
 				cc.click();
 				colorEdited = colorIndex;
@@ -542,8 +452,35 @@ const createPalettePicker = canvas => {
 	};
 
 	/**
-	 * Shared tap/click handler; a touchend fires with touches already
-	 * empty, so the lifted finger's coords live on changedTouches
+	 * @param {number} px
+	 * @param {number} py
+	 * @returns {number} the strip color index under the point
+	 */
+	const swatchAt = (px, py) => {
+		// fractions of the rendered rect, not the backing store: the
+		// phone palette flyout scales the canvas with CSS
+		const rect = canvas.getBoundingClientRect();
+		// a finger can slide a few pixels off the strip before it lifts
+		// and still pick, so a point past an edge takes the nearest swatch
+		const column = Math.floor(((px - rect.left) / rect.width) * 2);
+		const row = Math.min(
+			7,
+			Math.max(0, Math.floor(((py - rect.top) / rect.height) * 8)),
+		);
+		return row + (column <= 0 ? 0 : 8);
+	};
+
+	/**
+	 * @param {number} px
+	 * @param {number} py
+	 */
+	const pickBackground = (px, py) => {
+		State.palette?.setBackgroundColor(swatchAt(px, py));
+	};
+
+	/**
+	 * A touchend fires with touches already empty, so the lifted
+	 * finger's coords live on changedTouches
 	 * @param {*} e TouchEvent or MouseEvent
 	 * @param {boolean} isTouch
 	 */
@@ -552,32 +489,25 @@ const createPalettePicker = canvas => {
 		if (isTouch && !touch) {
 			return;
 		}
-		const rect = canvas.getBoundingClientRect();
-		const coords = isTouch
-			? { x: touch.pageX, y: touch.pageY }
-			: { x: e.clientX, y: e.clientY };
-
-		// fractions of the rendered rect, not the backing store: the
-		// phone palette flyout scales the canvas with CSS
-		const x = Math.floor(((coords.x - rect.left) / rect.width) * 2);
-		const y = Math.min(
-			7,
-			Math.max(0, Math.floor(((coords.y - rect.top) / rect.height) * 8)),
-		);
+		const index = isTouch
+			? swatchAt(touch.pageX, touch.pageY)
+			: swatchAt(e.clientX, e.clientY);
 
 		const currentTime = new Date().getTime();
 		const lastTime = isTouch ? lastTouchTime : lastMouseTime;
+		const lastIndex = isTouch ? lastTouchIndex : lastMouseIndex;
 
-		if (currentTime - lastTime < doubleTapThreshold) {
-			handleInteraction(x, y, true, isTouch);
-		} else {
-			handleInteraction(x, y, false, isTouch);
-		}
+		handleInteraction(
+			index,
+			currentTime - lastTime < doubleTapThreshold && index === lastIndex,
+		);
 
 		if (isTouch) {
 			lastTouchTime = currentTime;
+			lastTouchIndex = index;
 		} else {
 			lastMouseTime = currentTime;
+			lastMouseIndex = index;
 		}
 	};
 
@@ -586,14 +516,26 @@ const createPalettePicker = canvas => {
 		// without this the browser follows up with a synthetic mouseup
 		// and mouseEnd processes the same tap a second time
 		e.preventDefault();
-		if (e.touches.length === 0) {
+		if (e.touches.length === 0 && !spent) {
 			processEvent(e, true);
 		}
 	};
 
 	/** @param {MouseEvent} e */
 	const mouseEnd = e => {
-		processEvent(e, false);
+		// a desktop pen sends no touch events to cancel, so its mouseup
+		// follows a hold that already picked
+		if (spent) {
+			return;
+		}
+		const bg = picksBackground(e);
+		// a background pick stays out of the double click timing, or a
+		// quick fg then bg pick would open the color editor
+		if (bg) {
+			pickBackground(e.clientX, e.clientY);
+		} else if (bg === false) {
+			processEvent(e, false);
+		}
 	};
 
 	/** @param {number[]} a @param {number[]} b */
@@ -629,12 +571,27 @@ const createPalettePicker = canvas => {
 		cc.addEventListener('change', colorChange);
 		cc.addEventListener('blur', colorChange);
 	}
+	canvas.addEventListener('pointerdown', e => {
+		spent = !e.isPrimary;
+		hold.arm(
+			e,
+			() => {
+				spent = true;
+				pickBackground(e.clientX, e.clientY);
+			},
+			() => {
+				spent = true;
+			},
+		);
+	});
+	canvas.addEventListener('pointermove', hold.move);
 	canvas.addEventListener('touchend', touchEnd);
 	canvas.addEventListener('touchcancel', touchEnd);
 	canvas.addEventListener('mouseup', mouseEnd);
 	updatePalette();
 	canvas.addEventListener('contextmenu', e => {
 		e.preventDefault();
+		hold.flush();
 	});
 	document.addEventListener('keydown', keydown);
 	document.addEventListener('onPaletteChange', updatePalette);
@@ -647,7 +604,6 @@ export {
 	createDefaultPalette,
 	createPalettePreview,
 	createPalettePicker,
-	getUTF8,
-	getUnicode,
-	getUnicodeReverseMap,
+	createSwatchBinder,
+	picksBackground,
 };

@@ -4,9 +4,8 @@
  * (No @ts-check: FileSystemSyncAccessHandle and the worker-scoped
  * postMessage overloads are not in the repo's TS lib set; the JSDoc
  * below is documentation, not checked types.)
- * The main thread talks to it through journalStore.js's tiny RPC:
- * every message is `{ id, op, bytes? }` and every reply is
- * `{ id, ok, bytes?, error? }`.
+ * journalStore.js's RPC: every message is `{ id, op, bytes? }` and
+ * every reply is `{ id, ok, bytes?, error? }`.
  *
  * Crash safety: two generation files (journal.a / journal.b) plus a
  * one-byte meta file naming the active one. Appends go to the active
@@ -140,7 +139,14 @@ self.onmessage = async event => {
 	const { id, op, bytes } = event.data;
 	try {
 		if (!ready) {
-			ready = init();
+			// a reload can beat its predecessor's handles to the lock, and a
+			// second tab holds them until it closes; the next call retries,
+			// and a handle left open here would refuse the retry its lock
+			ready = init().catch(error => {
+				ready = null;
+				ops.close();
+				throw error;
+			});
 		}
 		await ready;
 		const fn = ops[op];

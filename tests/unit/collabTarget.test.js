@@ -1,8 +1,3 @@
-/**
- * Address grammar for the connect dialog and the worker: bare
- * host[:port][/room] spellings, explicit urls, the 8000 and 443
- * defaults, and the display spelling round trip.
- */
 import { describe, it, expect } from 'vitest';
 import {
 	MOEBIUS_PORT,

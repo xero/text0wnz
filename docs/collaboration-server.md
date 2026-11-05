@@ -186,9 +186,12 @@ full, fresh names are refused with `auth cooldown` until stale entries
 age out, so hostile name churn cannot grow it.
 
 Handles are kept to 100 characters, chat lines to 140, and a room holds
-the last 128 chat lines for late joiners. SAUCE fields are clamped at
-intake: title 35, author 20, group 20, and comments 4096 characters;
-font names 100.
+the last 128 chat lines for late joiners. The server clamps SAUCE
+fields at intake to 35 characters for the title, 20 for the author and
+the group, and 100 for the font name. It cuts comments, at intake and
+on restore, to the 255 lines of 64 bytes that a local save writes,
+where a blank or short line still fills a whole line, so a room keeps
+exactly the comments a save would.
 
 ---
 
@@ -239,6 +242,7 @@ the newest one on disk.
 | Limit             | Value                                                                                                                                                                                    |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Frame size        | 32 MB (vanilla `PASTE_AS_SELECTION` frames run tens of MB)                                                                                                                               |
+| Send backlog      | 64 MB per socket; a client that falls further behind is closed, since a dropped frame would leave it out of step with the room                                                           |
 | Idle sockets      | Reaped after 120 seconds; a 30 second heartbeat ping keeps quiet spectators alive                                                                                                        |
 | Sockets per room  | 64, handshake pending or not                                                                                                                                                             |
 | Rooms per process | 64                                                                                                                                                                                       |
@@ -246,7 +250,7 @@ the newest one on disk.
 | Bridge dial       | 3 second DNS lookup, 10 second connect, and 256 KB of browser frames queued before the upstream answers                                                                                  |
 | Operation log     | 10,000 operations or 8 MB per room, the timelapse substrate; older operations fold into a baseline                                                                                       |
 | Chat history      | 128 lines                                                                                                                                                                                |
-| SAUCE fields      | Title 35, author 20, group 20, comments 4096, font name 100 characters                                                                                                                   |
+| SAUCE fields      | Title 35, author 20, group 20, and font name 100 characters; comments 255 lines of 64 bytes, as a local save writes                                                                      |
 | Auth gate         | 4096 room names with a pending backoff; fresh names are refused while it is full                                                                                                         |
 
 Malformed frames are dropped with a log line, never a crash, which the

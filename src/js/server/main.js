@@ -1,11 +1,3 @@
-/**
- * Server entry: Moebius-native superset server on Bun.serve.
- * Loads persisted room docs (native .0wnz, or legacy v2 .bin as the
- * migration), autosaves dirty rooms on the configured interval with
- * hourly sha1-deduped backups, and saves on SIGINT AND SIGTERM
- * (docker stop sends SIGTERM).
- */
-
 import path from 'node:path';
 import { readFileSync, existsSync } from 'node:fs';
 import { parseArgs } from './config.js';
@@ -33,7 +25,7 @@ import {
 	sweepTempFiles,
 } from './persistence.js';
 
-const sessionsDirEarly = path.resolve('./sessions');
+const sessionsDir = path.resolve('./sessions');
 
 /** lazy per-room restore: EVERY room loads its persisted doc on
  * creation, not just the default; otherwise a named room boots blank
@@ -41,7 +33,7 @@ const sessionsDirEarly = path.resolve('./sessions');
 const restoreRoomState = room =>
 	// the RETURNED promise gates connects server-side, so no client can
 	// adopt the blank boot doc (or draw over the saved one) mid-load
-	loadRoomDoc(sessionsDirEarly, room.name)
+	loadRoomDoc(sessionsDir, room.name)
 		.then(saved => {
 			if (saved && !room.isDirty()) {
 				room.loadState(saved);
@@ -52,10 +44,8 @@ const restoreRoomState = room =>
 			console.error(`[Server] restore failed for ${room.name}:`, error));
 
 const config = parseArgs();
-const sessionsDir = path.resolve('./sessions');
-// boot hygiene before any room exists: crash temp leftovers go, and
-// mixed-case session files from pre-lowercase servers rename so the
-// normalized rooms can actually restore them
+// before any room exists, so every restore reads the swept,
+// lowercased directory
 await sweepTempFiles(sessionsDir);
 await migrateSessionCase(sessionsDir);
 const lastBackupHashes = new Map();
@@ -71,9 +61,6 @@ if (config.ssl) {
 	}
 }
 
-// a bad bridge env stops the boot with a sentence: a bridge aimed at
-// the app's own listener or its own /bridge path is never what the
-// operator meant
 const bridge = bridgeConfigFromEnv();
 try {
 	validateBridgeConfig(bridge, { port: config.port, plainPort: config.plainPort });
@@ -92,7 +79,6 @@ const server = createMoebiusServer({
 	maxColumns: config.maxColumns,
 	maxRows: config.maxRows,
 	staticDir: config.staticDir,
-	debug: config.debug,
 	bridge,
 	tls,
 	log: config.debug ? console.log : () => {},
@@ -138,6 +124,7 @@ const shutdown = async signal => {
 	process.exit(0);
 };
 process.on('SIGINT', () => shutdown('SIGINT'));
+// docker stop sends SIGTERM
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 callout(

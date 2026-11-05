@@ -1,4 +1,5 @@
-/** room name grammar shared by the ws router and persistence */
+/** room names become session file names: this grammar keeps them
+ * inside ./sessions */
 const ROOM_NAME_RE = /^[a-z0-9_-]{1,32}$/i;
 
 /** shared wire-auth backoff: two tries stay free (humans typo),
@@ -47,28 +48,20 @@ Examples:
 
 const callout = msg => {
 	console.log(
-		`╓─────  ${sanitize(msg, 100, false)}\n╙───────────────────────────────── ─ ─`,
+		`╓─────  ${sanitize(msg, 100)}\n╙───────────────────────────────── ─ ─`,
 	);
 };
 
-// Strips Unicode control characters and newlines,
-// limits length, and optionally adds quotes
-const sanitize = (input, limit = 100, quote = true) => {
+const sanitize = (input, limit = 100) => {
 	if (input === null || input === undefined) {
 		return '';
 	}
-	const str = [
-		...String(input)
-			.trim()
-			.replace(/\p{C}/gu, '')
-			.replace(/[\n\r]/g, ''),
-	]
+	return [...String(input).trim().replace(/\p{C}/gu, '')]
 		// code points, not UTF-16 units: a substring cut at the limit
 		// could split a surrogate pair, re-creating the lone surrogate
 		// the control strip just removed
 		.slice(0, limit)
 		.join('');
-	return quote ? `'${str}'` : str;
 };
 
 export {

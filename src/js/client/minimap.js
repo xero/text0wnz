@@ -1,10 +1,8 @@
 /**
- * Minimap: the whole doc at one pixel per cell, blended
- * fg-over-bg by glyph ink coverage, with the live viewport framed and
- * click/drag-to-scroll. Renders from the v3 planes through the
- * word-aware palette, so 256-color and RGB art previews true. Cheap by
- * construction (one ImageData walk), refreshed on a half-second tick
- * while visible plus instant frame-rect tracking on scroll.
+ * Minimap: one pixel per cell, fg blended over bg by glyph ink
+ * coverage. Reads the v3 planes through the word-aware palette so
+ * 256-color and RGB art previews true. One ImageData walk is cheap
+ * enough to repaint on a half-second tick while visible.
  */
 import State from './state.js';
 import { $ } from './ui.js';
@@ -138,10 +136,9 @@ const createMinimap = () => {
 			vp.getBoundingClientRect().top +
 			vp.scrollTop
 			: 0;
-		// target is CANVAS space; the grid of row-aligned scroll positions
-		// is offY + k*fh. Subtracting offY before the snap treated target
-		// as scroll space and centered one row low whenever the container
-		// margin matched the font height
+		// target is CANVAS space and row-aligned scroll positions are
+		// offY + k*fh: subtracting offY before the snap would center one
+		// row low whenever the container margin matches the font height
 		vp.scrollTop = offY + Math.round(target / fh) * fh;
 		// the viewport scroll event arrives async; track the frame NOW so
 		// drag-follow math never works from a stale position
@@ -158,10 +155,8 @@ const createMinimap = () => {
 	const travel = e =>
 		Math.hypot(e.clientX - pending.x, e.clientY - pending.y);
 
-	// drag-autoscroll: the box rides the finger 1:1 anywhere in the
-	// panel's visible slice; holding at (or past) an edge scrolls the
-	// map at a FIXED rate, and backing away from the edge stops it.
-	// Movement never scrolls the panel, so the rate stays predictable
+	// edge autoscroll runs at a FIXED rate from the rAF tick; pointer
+	// movement never scrolls the panel, so the rate stays predictable
 	let lastClientY = 0;
 	let autoScroll = 0;
 	const EDGE_RATE = 6;
@@ -210,9 +205,9 @@ const createMinimap = () => {
 		autoScroll = 0;
 	};
 
-	// canvas scrolls keep the box at the top of the visible map slice,
-	// so the map pages along with you; never while a finger is on the
-	// panel (or just left it), where the box answers to the gesture
+	// canvas scrolls page the map along with the box, but never while a
+	// finger is on the panel (or just left it): there the box answers
+	// to the gesture
 	let panelTouchedAt = 0;
 	const followFocus = top => {
 		if (
@@ -336,10 +331,9 @@ const createMinimap = () => {
 		}
 	});
 
-	// ON by default; the toggle is remembered.
-	// ?test pages (goldens, e2e) opt out of the DEFAULT: the panel is a
-	// fixed overlay that would sit inside pixel-golden captures. An
-	// explicit saved 'true' still shows it there.
+	// ?test pages (goldens, e2e) opt out of the default: the panel is a
+	// fixed overlay that would sit inside pixel-golden captures. A saved
+	// 'true' still shows it there
 	let stored = null;
 	try {
 		stored = localStorage.getItem('minimapVisible');

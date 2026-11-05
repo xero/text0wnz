@@ -16,8 +16,6 @@
 
 import { cp437ToUnicode } from './cp437.js';
 
-// ---------------------------------------------------------------- words
-
 export const ATTR_BLINK = 1 << 0;
 /** Reserved until double-width ships. */
 export const ATTR_WIDE_CONTINUATION = 1 << 1;
@@ -51,13 +49,10 @@ export const rgbOf = (word: number): { r: number; g: number; b: number } => ({
 	b: word & 0xff,
 });
 
-// -------------------------------------------------------------- palette
-
 /**
  * Canonical 6-bit -> 8-bit channel expansion: high-bit replication, the
- * Moebius join-doc rule and the client's createPalette. NOT v2's
- * round(v/63*255), which diverges for some values (e.g. 15 -> 61 vs
- * 60); the replication form is canonical in v3.
+ * Moebius join-doc rule and the client's createPalette. NOT
+ * round(v/63*255), which diverges for some values (15 -> 61, not 60).
  */
 export const expand6to8 = (v: number): number =>
 	(((v & 0x3f) << 2) | ((v & 0x3f) >> 4)) & 0xff;
@@ -92,8 +87,6 @@ export const createDefaultPaletteRGB = (): Uint32Array => {
 	});
 	return palette;
 };
-
-// ---------------------------------------------------------- glyph table
 
 export interface GlyphDef {
 	fontSlot: number;
@@ -171,8 +164,6 @@ export const createCP437GlyphTable = (fontSlot = 0): GlyphTable => {
 	}
 	return createGlyphTable(seed);
 };
-
-// ------------------------------------------------------------- doc + frames
 
 export type DocMode = 'classic16' | 'xbin16' | 'xterm256' | 'free';
 
@@ -271,8 +262,8 @@ const createBlankPlanes = (cells: number): Frame => {
 		fg: new Uint32Array(cells),
 		bg: new Uint32Array(cells),
 	};
-	// Blank = glyph 0, palette fg/bg 0: converting a zero-filled v2 doc
-	// yields exactly these words, so "new doc" is identical in both models
+	// converting a zero-filled u16 doc yields exactly these words, so
+	// "new doc" is identical in both models
 	frame.fg.fill(paletteColor(0));
 	frame.bg.fill(paletteColor(0));
 	return frame;

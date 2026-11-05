@@ -1,14 +1,14 @@
 /**
  * BIN (raw binary text) codec. Headerless char/attr pairs at a known
- * width: SAUCE BinaryText FileType (width/2) when set, the 160-column
- * default otherwise. Rows always derive from payload size and width;
- * binary data has no newlines to count.
+ * width: the SAUCE §FileType BinaryText width/2 when set, the
+ * 160-column default otherwise. Rows always derive from payload size
+ * and width; binary data has no newlines to count.
  */
 
 import { DocV3 } from '../doc.js';
 import { u16ToV3, v3ToU16Lossy } from '../convert.js';
 import { MAX_DOC_CELLS } from '../doc.js';
-import { SauceRecord, buildSauce, parseSauce } from './sauce.js';
+import { SauceRecord, buildSauce, commentText, parseSauce } from './sauce.js';
 import {
 	CodecError,
 	bytesToU16Cells,
@@ -21,11 +21,11 @@ export interface DocMeta {
 	author?: string;
 	group?: string;
 	comments?: string;
-	/** SAUCE font name (TInfoS), raw. */
+	/** SAUCE §FontName (TInfoS), raw. */
 	fontName?: string;
-	/** Raw SAUCE AR bits carried from an opened file (round trip). */
+	/** Raw SAUCE §ANSiFlags AR bits from an opened file (round trip). */
 	aspect?: number;
-	/** Raw SAUCE LS bits; 0 keeps an opened file's "no preference". */
+	/** Raw SAUCE §ANSiFlags LS bits; 0 round-trips "no preference". */
 	letterSpacingMode?: number;
 }
 
@@ -39,17 +39,21 @@ export const DEFAULT_BIN_COLUMNS = 160;
 
 export const decodeBin = (bytes: Uint8Array): DecodeResult => {
 	const sauce = parseSauce(bytes);
+	// FileType 1 reads as unset like PabloDraw (Binary.cs, GetWidth):
+	// wild BINs stamp it as the ANSi file type. TInfo1 never counts,
+	// since generic SAUCE adders stamp 80 on 160-column BINs
 	const columns =
-		sauce && sauce.dataType === 5 && sauce.fileType > 0
+		sauce && sauce.dataType === 5 && sauce.fileType > 1
 			? sauce.fileType * 2
 			: DEFAULT_BIN_COLUMNS;
 	// payloadSize already subtracts the COMNT block and EOF when the
-	// record's fileSize is 0; the old whole-length fallback decoded the
+	// record's fileSize is 0; a whole-length fallback would decode the
 	// SAUCE trailer as extra canvas rows
 	const payloadSize = sauce ? sauce.payloadSize : bytes.length;
 	// a trailing partial row pads instead of flooring away: PabloDraw
-	// and moebiusXBIN both keep it
-	const rows = Math.max(1, Math.ceil(payloadSize / columns / 2));
+	// and moebiusXBIN both keep it. Whole cells only: a lone odd byte
+	// is no cell and must not open a blank row
+	const rows = Math.max(1, Math.ceil(Math.floor(payloadSize / 2) / columns));
 	if (columns * rows > MAX_DOC_CELLS) {
 		throw new CodecError(`BIN ${columns}x${rows} exceeds the cell ceiling`);
 	}
@@ -73,7 +77,7 @@ export const decodeBin = (bytes: Uint8Array): DecodeResult => {
 					title: sauce.title,
 					author: sauce.author,
 					group: sauce.group,
-					comments: sauce.comments.join('\n'),
+					comments: commentText(sauce.comments),
 					fontName: sauce.fontName,
 				}
 			: {},
@@ -102,9 +106,16 @@ export const encodeBin = (
 	if (columns % 2 !== 0) {
 		throw new CodecError(`BIN needs an even column count, got ${columns}`);
 	}
+	if (columns === 2) {
+		// SAUCE §FileType: 2 columns write FileType 1, which decodeBin
+		// reads as unset, so the file would reopen at 160 columns
+		throw new CodecError(
+			'BIN needs at least 4 columns, because a 2-column BIN reopens at the 160-column default',
+		);
+	}
 	if (columns > 510) {
-		// the SAUCE FileType byte holds width/2; wider silently wrapped
-		// mod 256 and reloaded scrambled
+		// SAUCE §FileType: the BinaryText FileType byte holds width/2, so
+		// wider would silently wrap mod 256 and reload scrambled
 		throw new CodecError(`BIN caps at 510 columns, got ${columns}`);
 	}
 	const payload = u16CellsToBytes(imageData);

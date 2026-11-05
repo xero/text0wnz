@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import State from '../../src/js/client/state.js';
 import {
 	createHalfBlockController,
 	createShadingController,
@@ -224,7 +225,6 @@ describe('Freehand Tools - Panels and Cursors', () => {
 				select: vi.fn(),
 				ignore: vi.fn(),
 				unignore: vi.fn(),
-				redrawGlyphs: vi.fn(),
 			};
 		});
 
@@ -236,7 +236,6 @@ describe('Freehand Tools - Panels and Cursors', () => {
 			expect(controller).toHaveProperty('select');
 			expect(controller).toHaveProperty('ignore');
 			expect(controller).toHaveProperty('unignore');
-			expect(controller).toHaveProperty('redrawGlyphs');
 		});
 
 		it('should proxy panel methods correctly', () => {
@@ -250,9 +249,6 @@ describe('Freehand Tools - Panels and Cursors', () => {
 
 			controller.unignore();
 			expect(mockPanel.unignore).toHaveBeenCalled();
-
-			controller.redrawGlyphs();
-			expect(mockPanel.redrawGlyphs).toHaveBeenCalled();
 		});
 
 		it('should handle enable/disable with event listeners', () => {
@@ -334,8 +330,157 @@ describe('Freehand Tools - Panels and Cursors', () => {
 			const panel = await createShadingPanel();
 
 			expect(() => {
-				panel.select(177); // Light shade character
+				panel.select(177); // Medium shade
 			}).not.toThrow();
+		});
+
+		describe('chips', () => {
+			// chip 21 sits in band 1 (the medium shade) at color 5
+			const setup = async () => {
+				const panel = await createShadingPanel();
+				const chip = mockDocument.createElement.mock.results
+					.map(r => r.value)
+					.filter(el => el.className === 'shadeChip')[21];
+				const fire = (type, props = {}) => {
+					const e = {
+						button: 0,
+						detail: type === 'click' ? 1 : 0,
+						preventDefault: vi.fn(),
+						stopPropagation: vi.fn(),
+						...props,
+					};
+					chip.addEventListener.mock.calls
+						.filter(c => c[0] === type)
+						.forEach(c => c[1](e));
+					return e;
+				};
+				return { panel, fire };
+			};
+			const fgCalls = () => State.palette.setForegroundColor.mock.calls;
+			const bgCalls = () => State.palette.setBackgroundColor.mock.calls;
+
+			it('click picks the foreground and the shade', async () => {
+				const { panel, fire } = await setup();
+				fire('pointerdown');
+				fire('click');
+				expect(fgCalls()).toEqual([[5]]);
+				expect(bgCalls()).toEqual([]);
+				expect(panel.getMode().charCode).toBe(177);
+			});
+
+			it('ctrl click picks the background alone, as Windows and Linux deliver it', async () => {
+				const { panel, fire } = await setup();
+				fire('pointerdown', { ctrlKey: true });
+				fire('click', { ctrlKey: true });
+				expect(bgCalls()).toEqual([[5]]);
+				expect(fgCalls()).toEqual([]);
+				expect(panel.getMode().charCode).toBe(176);
+			});
+
+			it('right click and the macOS ctrl click pick the background once and keep the panel menu shut', async () => {
+				const { panel, fire } = await setup();
+				fire('pointerdown', { button: 2 });
+				const menu = fire('contextmenu', { button: 2 });
+				expect(menu.preventDefault).toHaveBeenCalled();
+				expect(menu.stopPropagation).toHaveBeenCalled();
+				fire('pointerdown', { ctrlKey: true });
+				fire('contextmenu', { ctrlKey: true });
+				fire('click', { ctrlKey: true });
+				fire('click');
+				expect(bgCalls()).toEqual([[5], [5]]);
+				expect(fgCalls()).toEqual([]);
+				expect(panel.getMode().charCode).toBe(176);
+			});
+
+			it('a keyboard click after a menu key pick still picks', async () => {
+				const { fire } = await setup();
+				fire('contextmenu');
+				fire('click', { detail: 0 });
+				expect(bgCalls()).toEqual([[5]]);
+				expect(fgCalls()).toEqual([[5]]);
+			});
+
+			describe('under touch', () => {
+				const finger = {
+					pointerType: 'touch',
+					isPrimary: true,
+					pointerId: 1,
+					clientX: 5,
+					clientY: 5,
+				};
+				// the hold's lift and second-finger listeners sit on the
+				// document
+				const doc = (type, e) =>
+					mockDocument.addEventListener.mock.calls
+						.filter(c => c[0] === type)
+						.forEach(c => c[1](e));
+
+				beforeEach(() => {
+					vi.useFakeTimers();
+				});
+
+				afterEach(() => {
+					vi.useRealTimers();
+				});
+
+				it('a hold picks the background alone, once, and its lift picks nothing', async () => {
+					const { panel, fire } = await setup();
+					fire('pointerdown', finger);
+					vi.advanceTimersByTime(499);
+					expect(bgCalls()).toEqual([]);
+					vi.advanceTimersByTime(1);
+					expect(bgCalls()).toEqual([[5]]);
+					doc('pointerup', finger);
+					fire('click');
+					expect(bgCalls()).toEqual([[5]]);
+					expect(fgCalls()).toEqual([]);
+					expect(panel.getMode().charCode).toBe(176);
+				});
+
+				it('a tap picks the foreground and the shade', async () => {
+					const { panel, fire } = await setup();
+					fire('pointerdown', finger);
+					doc('pointerup', finger);
+					fire('click');
+					vi.advanceTimersByTime(1000);
+					expect(fgCalls()).toEqual([[5]]);
+					expect(bgCalls()).toEqual([]);
+					expect(panel.getMode().charCode).toBe(177);
+				});
+
+				it('the native long-press contextmenu picks nothing more, whether it trails the timer or beats it', async () => {
+					const { fire } = await setup();
+					fire('pointerdown', finger);
+					vi.advanceTimersByTime(500);
+					const menu = fire('contextmenu');
+					expect(menu.preventDefault).toHaveBeenCalled();
+					expect(menu.stopPropagation).toHaveBeenCalled();
+					doc('pointerup', finger);
+					fire('pointerdown', finger);
+					vi.advanceTimersByTime(400);
+					fire('contextmenu');
+					expect(bgCalls()).toEqual([[5], [5]]);
+					vi.advanceTimersByTime(200);
+					doc('pointerup', finger);
+					expect(bgCalls()).toEqual([[5], [5]]);
+					expect(fgCalls()).toEqual([]);
+				});
+
+				it('a hold that wanders, meets a second finger, or is cancelled picks nothing', async () => {
+					const { fire } = await setup();
+					fire('pointerdown', finger);
+					fire('pointermove', { ...finger, clientY: 25 });
+					vi.advanceTimersByTime(600);
+					fire('pointerdown', finger);
+					doc('pointerdown', { ...finger, pointerId: 2, isPrimary: false });
+					vi.advanceTimersByTime(600);
+					fire('pointerdown', finger);
+					doc('pointercancel', finger);
+					vi.advanceTimersByTime(600);
+					expect(bgCalls()).toEqual([]);
+					expect(fgCalls()).toEqual([]);
+				});
+			});
 		});
 	});
 

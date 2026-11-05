@@ -1,10 +1,8 @@
 /**
  * Timelapse replay: baseline + op log -> capped multi-frame doc.
- * The final frame always equals the end state, resizes replay
- * row-aware at final dims, and hostile ops drop silently.
  */
 import { describe, it, expect } from 'vitest';
-import { paletteColor } from '../../src/js/core/doc.js';
+import { FONT_SLOT_UNSCII, paletteColor } from '../../src/js/core/doc.js';
 import {
 	MoebiusAction as A,
 	T0wnzAction,
@@ -123,8 +121,8 @@ describe('timelapseToDoc', () => {
 
 	// the doc must be big enough that the budget (not maxFrames or the
 	// op count) decides the stride, but no bigger: frame planes scale
-	// with cells x frames, and a 4M-cell variant of this test blew the
-	// 5s default on slow CI shards. The timeout stays as insurance
+	// with cells x frames, and a 4M-cell variant blows the 5s default on
+	// slow CI shards. The timeout is insurance
 	it(
 		'bounds frames x cells by the animation budget',
 		{ timeout: 30_000 },
@@ -200,5 +198,36 @@ describe('timelapseToDoc', () => {
 		expect(frames).toBe(4);
 		expect(glyphAt(doc, 3, 0, 0)).toBe(66);
 		expect(glyphAt(doc, 3, 1, 1)).toBe(67);
+	});
+});
+
+describe('timelapse glyphs', () => {
+	it('keeps NUL and 255 apart and gives unicode a font to draw from', () => {
+		const payload = basePayload(4, 1);
+		payload.cells = compressExtCells([
+			{ ...blankCell(), u: 0 },
+			{ ...blankCell(), u: 0xa0 },
+			blankCell(),
+			blankCell(),
+		]);
+		payload.ops = [
+			extDrawOp(2, 0, 0x2764),
+			{
+				t: 0,
+				type: A.DRAW,
+				data: { x: 3, y: 0, block: { code: 255, fg: 7, bg: 0 }, id: 1 },
+				seq: 2,
+			},
+		];
+		const { doc } = timelapseToDoc(payload);
+		const last = doc.frames.length - 1;
+		const ids = [0, 1, 2, 3].map(x => doc.getCell(last, x, 0).glyph & 0xffff);
+		expect([ids[0], ids[1], ids[3]]).toEqual([0, 255, 255]);
+		// the classic slot has no unicode font, so a heart there draws
+		// as the substitute box
+		expect(doc.glyphTable.get(ids[2])).toEqual({
+			fontSlot: FONT_SLOT_UNSCII,
+			codepoint: 0x2764,
+		});
 	});
 });

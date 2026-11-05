@@ -1,8 +1,8 @@
 // @ts-check
 /**
- * Test bridge: exposes internals on window for Playwright (goldens, e2e)
- * and on-device debugging. Loaded ONLY when the page is opened with ?test
- * (see main.js); never part of the normal boot path.
+ * Exposes internals on window for Playwright (goldens, e2e) and
+ * on-device debugging. Loaded ONLY under ?test (see main.js), never on
+ * the normal boot path.
  */
 import State from './state.js';
 import { Load, Save } from './file.js';

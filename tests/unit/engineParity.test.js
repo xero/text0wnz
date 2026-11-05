@@ -1,13 +1,10 @@
 /**
- * Scripted-stroke identity gate: one seeded op script
- * runs against the live v2 textArtCanvas (jsdom, rendering mocked
- * inert), the frozen v2 reference (tests/parity), and the v3 editor
- * core over the three-plane doc; the full u16 image must match
- * word-for-word after every op. The frozen reference keeps the gate
- * meaningful if canvas.js itself swaps engines. Covers draws,
- * half-block painting, mirror mode, the bright-bg optimize pass,
- * areas, delete, network quickDraw, undo/redo group boundaries, and
- * ice toggles.
+ * Scripted-stroke identity gate: one seeded op script runs against the
+ * live textArtCanvas (jsdom, rendering mocked inert), the frozen v2
+ * reference (tests/parity), and the v3 editor core over the three-plane
+ * doc; the full u16 image must match word-for-word after every op.
+ * canvas.js runs on the v3 core, so the frozen reference is what pins
+ * real v2 behavior.
  */
 import { describe, it, expect, vi } from 'vitest';
 
@@ -28,7 +25,6 @@ vi.mock('../../src/js/client/state.js', () => ({
 		modal: { loading: vi.fn(), close: vi.fn() },
 		loadingFromStorage: false,
 		saveToLocalStorage: vi.fn(),
-		saveUndoHistory: vi.fn(),
 	},
 }));
 
@@ -69,6 +65,8 @@ vi.mock('../../src/js/client/font.js', () => ({
 			drawWithAlpha: vi.fn(),
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
+			getData: vi.fn(() => ({ width: 8, height: 16 })),
+			dispose: vi.fn(),
 			setLetterSpacing: vi.fn(),
 			getLetterSpacing: vi.fn(() => false),
 		})),
@@ -81,7 +79,11 @@ vi.mock('../../src/js/client/palette.js', () => ({
 }));
 
 import { createTextArtCanvas } from '../../src/js/client/canvas.js';
-import { createDocV3, createEditorCore } from '../../src/js/core/index';
+import {
+	createDocV3,
+	createEditorCore,
+	v3ToU16,
+} from '../../src/js/core/index';
 import { createV2ReferenceEngine } from '../parity/v2ReferenceEngine.js';
 
 const COLUMNS = 40;
@@ -112,6 +114,17 @@ const makeV2 = () =>
 		const canvas = createTextArtCanvas(container, () => resolve(canvas));
 	});
 
+/** u16 area to the EditCell area the plane-native setAreaCells takes */
+const cellArea = area => ({
+	cells: Array.from(area.data, word => ({
+		charCode: word >> 8,
+		fg: word & 15,
+		bg: (word >> 4) & 15,
+	})),
+	width: area.width,
+	height: area.height,
+});
+
 /** Adapt the v3 core to the common v2-shaped surface. */
 const wrapV3 = () => {
 	const doc = createDocV3({ columns: COLUMNS, rows: ROWS });
@@ -122,7 +135,7 @@ const wrapV3 = () => {
 		drawHalfBlock: v3.drawHalfBlocks,
 		deleteArea: v3.deleteArea,
 		getArea: v3.getAreaU16,
-		setArea: v3.setAreaU16,
+		setArea: (area, x, y) => v3.setAreaCells(cellArea(area), x, y),
 		quickDraw: v3.quickDrawU16,
 		startUndo: v3.startUndo,
 		undo: v3.undo,
@@ -132,15 +145,17 @@ const wrapV3 = () => {
 		getIceColors: () => doc.getIceColors(),
 		getBlock: v3.getBlock,
 		getHalfBlock: v3.getHalfBlockAt,
-		getImageData: () => v3.toU16().imageData,
+		getImageData: () => v3ToU16(doc).imageData,
 	};
 };
 
 const buildEngines = async () => {
 	const live = await makeV2();
-	live.resize(COLUMNS, ROWS);
+	// setup, not an edit: the other engines start at this size with no
+	// history, so a resize step here would add one undo the rest lack
+	live.resize(COLUMNS, ROWS, { undoable: false });
 	live.name = 'v2-live';
-	// the canvas area ops went plane native (selection fidelity); the
+	// the canvas area ops are plane native (selection fidelity); the
 	// parity script speaks u16, and on classic content the EditCell
 	// nibble mapping is exact, so these adapters stay lossless here
 	live.getArea = (x, y, w, h) => {
@@ -152,20 +167,7 @@ const buildEngines = async () => {
 		}
 		return { data, width: w, height: h };
 	};
-	live.setArea = (area, x, y) =>
-		live.setAreaCells(
-			{
-				cells: Array.from(area.data, word => ({
-					charCode: word >> 8,
-					fg: word & 15,
-					bg: (word >> 4) & 15,
-				})),
-				width: area.width,
-				height: area.height,
-			},
-			x,
-			y,
-		);
+	live.setArea = (area, x, y) => live.setAreaCells(cellArea(area), x, y);
 	const reference = createV2ReferenceEngine(COLUMNS, ROWS);
 	reference.name = 'v2-reference';
 	return [live, reference, wrapV3()];
@@ -201,7 +203,6 @@ describe('engine parity: v2 live vs v2 reference vs v3 core', () => {
 		};
 
 		const ops = [
-			// scattered block draws (sometimes with the optimize pass)
 			() => {
 				const optimise = rand() < 0.3;
 				const writes = [];
@@ -219,7 +220,6 @@ describe('engine parity: v2 live vs v2 reference vs v3 core', () => {
 					engine.draw(cb => writes.forEach(w => cb(...w)), optimise);
 				}
 			},
-			// half-block strokes
 			() => {
 				const writes = [];
 				for (let n = 0; n < 1 + randInt(16); n++) {
@@ -230,7 +230,6 @@ describe('engine parity: v2 live vs v2 reference vs v3 core', () => {
 					engine.drawHalfBlock(cb => writes.forEach(w => cb(...w)));
 				}
 			},
-			// delete a region
 			() => {
 				const x = randInt(COLUMNS - 4);
 				const y = randInt(ROWS - 4);
@@ -242,7 +241,6 @@ describe('engine parity: v2 live vs v2 reference vs v3 core', () => {
 					engine.deleteArea(x, y, w, h, bg);
 				}
 			},
-			// copy then paste elsewhere
 			() => {
 				const x = randInt(COLUMNS - 6);
 				const y = randInt(ROWS - 6);
@@ -271,7 +269,6 @@ describe('engine parity: v2 live vs v2 reference vs v3 core', () => {
 					engine.quickDraw(blocks);
 				}
 			},
-			// undo a few groups
 			() => {
 				const n = 1 + randInt(3);
 				for (let i = 0; i < n; i++) {
@@ -280,7 +277,6 @@ describe('engine parity: v2 live vs v2 reference vs v3 core', () => {
 					}
 				}
 			},
-			// redo a few groups
 			() => {
 				const n = 1 + randInt(3);
 				for (let i = 0; i < n; i++) {
@@ -289,14 +285,13 @@ describe('engine parity: v2 live vs v2 reference vs v3 core', () => {
 					}
 				}
 			},
-			// mirror mode flip
 			() => {
 				const enabled = rand() < 0.5;
 				for (const engine of engines) {
 					engine.setMirrorMode(enabled);
 				}
 			},
-			// ice colors flip (v2 flips a flag; v3 refolds the planes)
+			// v2 flips a flag; v3 refolds the planes
 			() => {
 				const ice = rand() < 0.5;
 				for (const engine of engines) {
@@ -311,7 +306,6 @@ describe('engine parity: v2 live vs v2 reference vs v3 core', () => {
 			compare(`${op} (kind ${pick})`);
 		}
 
-		// spot-check the read APIs against each other on the final state
 		const [base, ...rest] = engines;
 		for (let n = 0; n < 200; n++) {
 			const x = randInt(COLUMNS);

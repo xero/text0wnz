@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import {
+	ATTR_BLINK,
+	attrsOf,
 	createDocV3,
 	glyphWord,
 	paletteColor,
 	rgbColor,
+	type DocV3,
 } from '../../src/js/core/doc.js';
 import { v3ToU16, v3ToU16Lossy } from '../../src/js/core/convert.js';
 import { createEditorCore } from '../../src/js/core/editor.js';
 import { decodeAns } from '../../src/js/core/codecs/ans.js';
+import { decodeBin } from '../../src/js/core/codecs/bin.js';
 import { decodeDur } from '../../src/js/core/codecs/dur.js';
 import { decodeTundra } from '../../src/js/core/codecs/tundra.js';
 import { gzip } from '../../src/js/core/codecs/util.js';
@@ -150,7 +154,6 @@ describe('editor.loadDoc', () => {
 		expect(doc.getCell(0, 0, 0).fg).toBe(paletteColor(12));
 		expect(doc.getCell(0, 1, 0).fg).toBe(paletteColor(196));
 		expect(doc.getCell(0, 1, 0).bg).toBe(paletteColor(3));
-		// ...and the source's 256-entry palette is adopted wholesale
 		expect(doc.palette.length).toBe(256);
 		expect(doc.palette[196]).toBe(rgbColor(255, 0, 0));
 		// the snowman re-registers in THIS doc's glyph table
@@ -162,6 +165,18 @@ describe('editor.loadDoc', () => {
 		expect(doc.getIceColors()).toBe(true);
 	});
 
+	it('keeps CP437 0 and 255 apart, though both map to NBSP', () => {
+		// BIN and ANSI opens reach the canvas through loadDoc, and a
+		// font like Topaz draws 255 as a visible glyph
+		const source = decodeBin(
+			new Uint8Array([0, 0x07, 255, 0x17, 32, 0x07, 255, 0x07]),
+		).doc;
+		const doc = createDocV3({ columns: 80, rows: 25 });
+		createEditorCore(doc).loadDoc(source);
+		const chars = Array.from(v3ToU16(doc).imageData.slice(0, 4), w => w >> 8);
+		expect(chars).toEqual([0, 255, 32, 255]);
+	});
+
 	it('round-trips a classic doc losslessly and clears history', () => {
 		const source = decodeAns(makeAnsi({ columns: 40, rows: 10, seed: 4 })).doc;
 		const doc = createDocV3({ columns: 80, rows: 25 });
@@ -170,7 +185,7 @@ describe('editor.loadDoc', () => {
 		editor.drawBlocks(cb => cb(88, 7, 0, 0, 0));
 		editor.loadDoc(source);
 		expect(v3ToU16(doc)).toEqual(v3ToU16(source));
-		expect(editor.undo()).toBe(false); // history gone
+		expect(editor.undo()).toBe(false);
 	});
 });
 
@@ -279,7 +294,94 @@ describe('ice toggle with extended colors', () => {
 	});
 });
 
-describe('loadDoc with short-palette sources (golden regression)', () => {
+describe('undo across blink folds', () => {
+	const wordsAt = (doc: DocV3, i: number) => [
+		doc.frames[0].glyph[i],
+		doc.frames[0].fg[i],
+		doc.frames[0].bg[i],
+	];
+
+	it('a stroke undo restores a loaded steady bright bg word for word', () => {
+		// a SAUCE-less UTF-8 ANSI paints SGR 101 as a steady bright bg
+		// with ice off, a fold no edit under that flag writes
+		const { doc: source } = decodeAns(
+			new TextEncoder().encode('\x1b[101mA\x1b[0m'),
+			{ utf8: true },
+		);
+		const doc = createDocV3({ columns: 80, rows: 25 });
+		const writes: number[] = [];
+		const editor = createEditorCore(doc, {
+			onWrite: write => writes.push(write.word),
+		});
+		editor.loadDoc(source);
+		expect(doc.getIceColors()).toBe(false);
+		const loaded = wordsAt(doc, 0);
+		expect(attrsOf(loaded[0]) & ATTR_BLINK).toBe(0);
+		expect(loaded[2]).toBe(paletteColor(12));
+		const mirrored = v3ToU16Lossy(doc).imageData[0];
+		editor.startUndo();
+		editor.drawBlocks(draw => draw(66, 7, 0, 0, 0));
+		writes.length = 0;
+		expect(editor.undo()).toBe(true);
+		expect(wordsAt(doc, 0)).toEqual(loaded);
+		expect(writes).toEqual([mirrored]);
+	});
+
+	it('a step recorded under the other ice flag refolds on undo and redo', () => {
+		const doc = createDocV3({ columns: 2, rows: 1 });
+		const editor = createEditorCore(doc);
+		const steady = [glyphWord(65, 0), paletteColor(7), paletteColor(9)];
+		// bright bg 9 without ice stores as blink + bg 1
+		editor.startUndo();
+		editor.drawBlocks(draw => draw(65, 7, 9, 0, 0));
+		editor.startUndo();
+		editor.drawBlocks(draw => draw(66, 7, 0, 0, 0));
+		editor.setIceColors(true);
+		editor.undo();
+		expect(wordsAt(doc, 0)).toEqual(steady);
+		editor.undo();
+		editor.redo();
+		expect(wordsAt(doc, 0)).toEqual(steady);
+	});
+
+	it('an ice toggle commits the open step so each step restores in its own fold', () => {
+		const doc = createDocV3({ columns: 2, rows: 1 });
+		const editor = createEditorCore(doc);
+		editor.startUndo();
+		editor.drawBlocks(draw => draw(65, 7, 9, 0, 0));
+		editor.setIceColors(true);
+		editor.drawBlocks(draw => draw(66, 7, 9, 1, 0));
+		editor.setIceColors(false);
+		const first = wordsAt(doc, 0);
+		const second = wordsAt(doc, 1);
+		expect(editor.undo()).toBe(true);
+		expect(wordsAt(doc, 0)).toEqual(first);
+		expect(wordsAt(doc, 1)).toEqual([0, paletteColor(0), paletteColor(0)]);
+		editor.redo();
+		expect(wordsAt(doc, 1)).toEqual(second);
+	});
+
+	it('an open step after an ice toggle holds the words on screen', () => {
+		// the journal writes an open step's after words as they stand,
+		// so none of them may keep a fold the toggle rewrote
+		const doc = createDocV3({ columns: 2, rows: 1 });
+		const editor = createEditorCore(doc);
+		editor.startUndo();
+		editor.drawBlocks(draw => draw(65, 7, 9, 0, 0));
+		editor.setIceColors(true);
+		editor.drawBlocks(draw => draw(66, 7, 9, 1, 0));
+		const peek = editor.arena.peekStroke();
+		expect(peek).not.toBeNull();
+		for (const plane of ['glyph', 'fg', 'bg'] as const) {
+			const flat = peek?.patches[plane] ?? new Uint32Array(0);
+			for (let i = 0; i < flat.length; i += 3) {
+				expect(flat[i + 2]).toBe(doc.frames[0][plane][flat[i]]);
+			}
+		}
+	});
+});
+
+describe('loadDoc with short-palette sources', () => {
 	it('keeps high palette-index words live instead of freezing to black', () => {
 		// exactly what the UTF-8 reader produces: paletteColor(n >= 16)
 		// words on a doc whose own palette has only 16 entries. Freezing

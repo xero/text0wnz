@@ -13,6 +13,7 @@ import {
 	shadeCycle,
 } from '../core/index';
 import { createAsciiStrokePainter } from './asciiBrush.js';
+import { createSwatchBinder } from './palette.js';
 
 const createHalfBlockController = () => {
 	let prev = {};
@@ -168,9 +169,8 @@ const createShadingController = (panel, charMode) => {
 		);
 	};
 
-	// A pen picks its shade from pressure directly ("pen draws
-	// with pressure"); finger and mouse keep the classic darken/lighten
-	// cycle. Quartiles map onto the CP437 shade ramp.
+	// pen pressure quartiles map straight onto the CP437 shade ramp;
+	// finger and mouse keep the darken/lighten cycle
 	const shadeFromPressure = pressure => {
 		if (pressure < 0.25) {
 			return 176;
@@ -196,8 +196,8 @@ const createShadingController = (panel, charMode) => {
 			penPressure !== null
 				? shadeFromPressure(penPressure)
 				: calculateShadingCharacter(x, y);
-		// whole cells only: judging halfBlockY here let a half-row wiggle
-		// inside one cell count as a new point and advance the shade ramp
+		// whole cells only: judging halfBlockY would count a half-row
+		// wiggle inside one cell as a new point and advance the shade ramp
 		// twice in a single pass (uneven 176/177 mixes)
 		if (prev.x !== coords.x || prev.y !== coords.y) {
 			if (Math.abs(prev.x - coords.x) > 1 || Math.abs(prev.y - coords.y) > 1) {
@@ -242,7 +242,7 @@ const createShadingController = (panel, charMode) => {
 
 	const canvasDrag = e => {
 		// a drag with no down (mid-hold tool switch, alt+click sample)
-		// has no drawMode and no undo group; it used to throw or paint
+		// has no drawMode and no undo group; drawing would throw or paint
 		// with stale state
 		if (!stroking) {
 			return;
@@ -267,8 +267,8 @@ const createShadingController = (panel, charMode) => {
 		document.removeEventListener('onTextCanvasDrag', canvasDrag);
 		document.removeEventListener('keydown', keyDown);
 		document.removeEventListener('keyup', keyUp);
-		// removing the keyup listener mid-hold used to stick the shift
-		// flag on, and the stale endpoint drew phantom Bresenham lines
+		// removing the keyup listener mid-hold would stick the shift flag
+		// on, and a stale endpoint would draw phantom Bresenham lines
 		prev = {};
 		stroking = false;
 		reduce = false;
@@ -282,12 +282,10 @@ const createShadingController = (panel, charMode) => {
 		select: panel.select,
 		ignore: panel.ignore,
 		unignore: panel.unignore,
-		redrawGlyphs: panel.redrawGlyphs,
 	};
 };
 
-// the shade ramp the picker, the sampler, and the brush cycle share,
-// lightest to solid
+// lightest to solid, the same ramp shadeCycle walks
 const SHADE_RAMP = [176, 177, 178, 219];
 
 const createShadingPanel = async () => {
@@ -300,7 +298,6 @@ const createShadingPanel = async () => {
 	const hint = document.createElement('SPAN');
 	hint.className = 'settingHint';
 	hint.innerText = 'hold shift to reduce';
-	// chip references live here, never read back off the DOM
 	const chips = [];
 
 	const highlight = () => {
@@ -331,6 +328,7 @@ const createShadingPanel = async () => {
 		highlight();
 	};
 
+	const bindChip = createSwatchBinder();
 	for (let i = 0; i < 64; i++) {
 		const btn = document.createElement('BUTTON');
 		btn.type = 'button';
@@ -342,7 +340,11 @@ const createShadingPanel = async () => {
 		const canvas = createCanvas(State.fontWidth, State.fontHeight);
 		canvas.className = 'gc';
 		btn.appendChild(canvas);
-		btn.addEventListener('click', () => {
+		bindChip(btn, bg => {
+			if (bg) {
+				State.palette.setBackgroundColor(i % 16);
+				return;
+			}
 			band = i >> 4;
 			State.palette.setForegroundColor(i % 16);
 			highlight();
@@ -400,8 +402,8 @@ const createShadingPanel = async () => {
 		ignored = false;
 	};
 
-	// fg and bg both ride the palette now; the band only steers what a
-	// sample re-selects and what the picker highlights
+	// fg and bg ride the palette; the band only steers what a sample
+	// re-selects and what the picker highlights
 	const getMode = () => ({
 		halfBlockMode: false,
 		foreground: State.palette.getForegroundColor(),
@@ -533,9 +535,8 @@ const createCharacterBrushPanel = async () => {
 	};
 
 	// the map is 1x in the backing store, cells packed edge to edge; CSS
-	// scales it by the cell zoom so glyph pixels stay whole multiples
-	/** one cell's glyph, with the selection ring when it wears it; the
-	 * ring draws inside the cell, so repainting a cell erases its ring */
+	// scales it by the cell zoom so glyph pixels stay whole multiples.
+	// the ring draws inside the cell, so repainting a cell erases its ring
 	const paintCell = (ctx, panelFont, index, fg, bg, ring) => {
 		const x = (index % cols) * glyphW;
 		const y = Math.floor(index / cols) * glyphH;
@@ -745,13 +746,12 @@ const createCharacterBrushPanel = async () => {
 };
 
 const createFillController = () => {
-	// fill lives in the brush submenu, so like its siblings it keeps
-	// the bar open and the brushes nav lit while active
+	// fill lives in the brush submenu, so it lights the brushes nav
 	const nav = $('brushes');
 	const fillPoint = e => {
 		// a seed outside the document floods a phantom wrapped row; the
-		// pointer clamps downs now, but the seed must never trust it
-		// (a blank read for the phantom cell would still seed a flood)
+		// pointer clamps downs, but the seed must never trust it (a blank
+		// read for the phantom cell would still seed a flood)
 		if (
 			!cellInRange(
 				e.detail.x,
@@ -776,7 +776,6 @@ const createFillController = () => {
 				let coord = [e.detail.x, e.detail.halfBlockY];
 				const queue = [coord];
 
-				// mirror mode: seed the mirrored position too when it matches
 				if (State.textArtCanvas.getMirrorMode()) {
 					const mirrorX = State.textArtCanvas.getMirrorX(e.detail.x);
 					if (mirrorX >= 0 && mirrorX < columns) {
@@ -835,10 +834,10 @@ const createFillController = () => {
 								if (coord[0] > 0) {
 									queue.push([coord[0] - 1, coord[1], 0]);
 								}
-								// > 1, not > 2: parity picks the branch (even pushes
-							// -1, odd pushes -2) so the single bound is exact,
-							// like the downward twin; > 2 blocked propagation
-							// from half-row 2 entirely
+								// > 1, not > 2: parity picks the step (even -1, odd
+								// -2) so the single bound is exact, like the
+								// downward twin; > 2 would block propagation from
+								// half-row 2 entirely
 								if (coord[1] > 1) {
 									if (block.halfBlockY === 1) {
 										queue.push([coord[0], coord[1] - 2, 2]);
@@ -867,10 +866,7 @@ const createFillController = () => {
 								if (coord[0] > 0) {
 									queue.push([coord[0] - 1, coord[1], 0]);
 								}
-								// > 1, not > 2: parity picks the branch (even pushes
-							// -1, odd pushes -2) so the single bound is exact,
-							// like the downward twin; > 2 blocked propagation
-							// from half-row 2 entirely
+								// > 1: the same parity bound as the left half
 								if (coord[1] > 1) {
 									if (block.halfBlockY === 1) {
 										queue.push([coord[0], coord[1] - 2, 2]);
@@ -963,16 +959,15 @@ const vPathPoints = (x, hb0, hb1) => {
 	return points;
 };
 
-// the three shape vocabularies, each with a glyph taste of itself
 const SHAPE_MODES = [
 	{ value: 'block', label: 'Block', glyph: '▀▄▀' },
 	{ value: 'oldskool', label: 'Old Skool', glyph: '.-\'' },
 	{ value: 'nuskool', label: 'Nu Skool', glyph: ',d$P' },
 ];
 
-// a labeled control row in the tool settings window; the row keeps the
-// pair together so a bar can lay them out side by side. Returns the
-// label so a caller can hang a readout off it
+// the row keeps label and control together so a bar can lay them out
+// side by side; the label comes back so a caller can hang a readout
+// off it
 const mountSetting = (section, text, element) => {
 	const row = document.createElement('DIV');
 	row.className = 'settingRow';
@@ -995,8 +990,7 @@ const pointChanged = (e, prev) => {
 	);
 };
 
-// square and circle speak the same settings vocabulary: a shape mode
-// pick plus an outline/filled pair, persisted under the tool's keys
+// shared by square and circle, persisted under each tool's own keys
 const createShapeSettings = tsSection => {
 	let outlineMode = true;
 
@@ -1321,8 +1315,8 @@ const createSquareController = () => {
 		}
 		// old skool: edges run between the corner cells and the corner glyphs
 		// land last so they win their cells. both edges ride the upper
-		// half and voice dashes: per half voicing let stacked boxes land
-		// an underscore on a hyphen and densify the shared line to an
+		// half and voice dashes: per half voicing would let stacked boxes
+		// land an underscore on a hyphen and densify the shared line to an
 		// equals sign. a path of one cell skips the engine, whose lone
 		// tap stamps an apostrophe pebble instead of line ink
 		if (x1 - 1 >= x0 + 1) {
@@ -1552,10 +1546,9 @@ const createCircleController = () => {
 
 	const processCoords = () => {
 		const endPoint = endXY || startXY;
-		// box drag like the square tool next door: the drag rect IS the
-		// circle's box. old skool fills it exactly, both width parities;
-		// block and nu skool keep their center anchored odd grammars and
-		// inscribe inside it
+		// the drag rect IS the circle's box: old skool fills it exactly at
+		// both width parities; block and nu skool keep their center
+		// anchored odd grammars and inscribe inside it
 		const x0 = Math.min(startXY.x, endPoint.x);
 		const x1 = Math.max(startXY.x, endPoint.x);
 		const hb0 = Math.min(startXY.halfBlockY, endPoint.halfBlockY);
@@ -1640,8 +1633,8 @@ const createCircleController = () => {
 			b2 * px <= a2 * py;
 			px += 1
 		) {
-			// through the rim column: px * 2 stopped one short of the right
-			// wall and skipped the apexes entirely at px = 0
+			// + 1 reaches the rim column: px * 2 stops one short of the right
+			// wall and skips the apexes entirely at px = 0
 			const amount = px * 2 + 1;
 			const start = sx - px;
 			const y0 = sy + py;
@@ -1661,8 +1654,7 @@ const createCircleController = () => {
 			a2 * py <= b2 * px;
 			py += 1
 		) {
-			// through the rim column: px * 2 stopped one short of the right
-			// wall and skipped the apexes entirely at px = 0
+			// + 1 reaches the rim column, as above
 			const amount = px * 2 + 1;
 			const start = sx - px;
 			const y0 = sy + py;
@@ -1809,7 +1801,9 @@ const createSampleTool = async (
 	characterBrush,
 	characterElement,
 ) => {
-	const sample = async (x, halfBlockY) => {
+	// keepTool: an Alt sample is a modifier on the active tool, so only
+	// a sample tool click steps back to the previous tool
+	const sample = async (x, halfBlockY, keepTool = false) => {
 		let block = State.textArtCanvas.getHalfBlock(x, halfBlockY);
 		if (block.isBlocky) {
 			if (block.halfBlockY === 0) {
@@ -1817,7 +1811,9 @@ const createSampleTool = async (
 			} else {
 				State.palette.setForegroundColor(block.lowerBlockColor);
 			}
-			Toolbar.returnToPreviousTool();
+			if (!keepTool) {
+				Toolbar.returnToPreviousTool();
+			}
 		} else {
 			block = State.textArtCanvas.getBlock(block.x, Math.floor(block.y / 2));
 			State.palette.setForegroundColor(block.foregroundColor);
@@ -1877,9 +1873,8 @@ const createAttributeBrushController = () => {
 
 		const fontWidth = State.font.getWidth();
 		const fontHeight = State.font.getHeight();
-		const size = Math.sqrt(brushSize);
+		const size = brushSize;
 
-		// Center the brush area around the cursor position
 		const offsetCells = Math.floor(size / 2);
 		const startX = x - offsetCells;
 		const startY = y - offsetCells;
@@ -1918,15 +1913,14 @@ const createAttributeBrushController = () => {
 		let newForeground, newBackground;
 
 		if (altKey) {
-			// Alt+click modifies background color only (the -8 fold is
-			// classic16 semantics; extended color words pass through)
+			// the -8 fold is classic16 semantics; extended color words pass
+			// through
 			newForeground = block.foregroundColor;
 			newBackground =
 				currentForeground > 7 && currentForeground <= 15
 					? currentForeground - 8
 					: currentForeground;
 		} else {
-			// Normal click modifies both foreground and background colors
 			newForeground = currentForeground;
 			newBackground = currentBackground;
 		}
@@ -1942,7 +1936,7 @@ const createAttributeBrushController = () => {
 	};
 
 	const paintArea = (centerX, centerY, altKey) => {
-		const size = Math.sqrt(brushSize);
+		const size = brushSize;
 		const offsetCells = Math.floor(size / 2);
 		const startX = centerX - offsetCells;
 		const startY = centerY - offsetCells;
@@ -1967,7 +1961,6 @@ const createAttributeBrushController = () => {
 	};
 
 	const paintLine = (fromX, fromY, toX, toY, altKey) => {
-		// Use Bresenham's line algorithm to paint attributes along a line
 		const dx = Math.abs(toX - fromX);
 		const dy = Math.abs(toY - fromY);
 		const sx = fromX < toX ? 1 : -1;
@@ -1996,7 +1989,6 @@ const createAttributeBrushController = () => {
 	};
 
 	const canvasMove = e => {
-		// Update preview position when mouse moves (not dragging)
 		if (lastPreviewX !== e.detail.x || lastPreviewY !== e.detail.y) {
 			updatePreviewCursor(e.detail.x, e.detail.y);
 		}
@@ -2009,7 +2001,6 @@ const createAttributeBrushController = () => {
 		updatePreviewCursor(e.detail.x, e.detail.y);
 
 		if (e.detail.shiftKey && lastCoord) {
-			// Shift+click draws a line from last point
 			paintLine(
 				lastCoord.x,
 				lastCoord.y,
@@ -2046,20 +2037,12 @@ const createAttributeBrushController = () => {
 	};
 
 	const setBrushSize = size => {
-		// Validate that size is a perfect square
-		const sqrtSize = Math.sqrt(size);
-		if (sqrtSize === Math.floor(sqrtSize)) {
-			brushSize = size;
-			if (lastPreviewX >= 0 && lastPreviewY >= 0) {
-				updatePreviewCursor(lastPreviewX, lastPreviewY);
-			}
+		brushSize = size;
+		if (lastPreviewX >= 0 && lastPreviewY >= 0) {
+			updatePreviewCursor(lastPreviewX, lastPreviewY);
 		}
 	};
 
-	const getBrushSize = () => brushSize;
-
-	// the slider speaks 1-16; the brush itself wants the squared cell
-	// count its validator expects
 	const sizeSlider = document.createElement('INPUT');
 	sizeSlider.type = 'range';
 	sizeSlider.id = 'attribSize';
@@ -2069,14 +2052,13 @@ const createAttributeBrushController = () => {
 	const applySize = n => {
 		sizeSlider.value = String(n);
 		sizeReadout.innerText = String(n);
-		setBrushSize(n * n);
+		setBrushSize(n);
 	};
 	sizeSlider.addEventListener('input', () => {
 		const n = parseInt(sizeSlider.value, 10) || 1;
 		applySize(n);
 		State.toolSettings.set('attribSize', n);
 	});
-	// the readout rides the heading mountSetting hands back
 	mountSetting('attrib', 'Size', sizeSlider).appendChild(sizeReadout);
 	applySize(State.toolSettings.get('attribSize', 1));
 
@@ -2112,7 +2094,6 @@ const createAttributeBrushController = () => {
 		enable: enable,
 		disable: disable,
 		setBrushSize: setBrushSize,
-		getBrushSize: getBrushSize,
 	};
 };
 

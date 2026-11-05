@@ -261,21 +261,17 @@ const debug = msg => {
 
 **fileFormats.test.js** - File I/O: Formats and parsing
 
-- Binary data handling
 - Error handling
-- File class internal logic
+- FileReader wiring for ANSI, BIN, XBin, and UTF-8 opens
 - SAUCE record processing
 - ANSI parsing engine
 - UTF-8 processing
 
 **fileAdvanced.test.js** - File I/O: Advanced operations
 
-- Advanced save operations
-- Data conversion functions
-- File format edge cases
-- Internal data processing
-- PNG image generation
-- Font name conversions
+- ANSI, UTF-8 ANSI, XBin, and BIN generation
+- Empty, very large, and corrupt files
+- File extension handling
 
 **font.test.js** - Font loading and rendering
 
@@ -299,38 +295,41 @@ const debug = msg => {
 
 **freehandShapes.test.js** - Drawing tools: Shapes and fill
 
-- Fill controller
-- Shapes controller
+- Fill controller and flood fill
 - Line controller
-- Square controller (outline and fill modes)
+- Square controller
 - Circle controller
-- Shape drawing algorithms
+- Attribute brush controller
+- Selection tool
 
 **freehandAdvanced.test.js** - Drawing tools: Advanced tools
 
-- Attribute brush controller
-- Selection tool
 - Sample tool (color picker)
-- Line drawing algorithms
+- Line and shape drawing algorithms
 - Panel state management
 - Event handling edge cases
 - Memory management patterns
+- Line, square, and half-block controller branches
+
+**freehandTools.test.js** - Drawing tools: Shading strokes
+
+- One ramp step per cell, not per half row
+- A drag without a down paints nothing
+- Disabling the brush closes the stroke
 
 **keyboard.test.js** - Keyboard input and shortcuts
 
-- Keyboard mode toggle
-- Text input handling
-- Arrow key navigation
-- Shortcut key handling
-- Cursor movement
-- Special key handling
+- F-key character sets and F1-F12 typing
+- Cursor clamping and selection rects
+- Row and column inserts, deletes, and erases
+- Typed glyph order, Tab, and Enter
+- Cut, copy, and the paste modes
 
-**main.test.js** - Application initialization
+**main.test.js** - Application boot
 
-- Module initialization
-- Event listener setup
-- State management
-- Integration tests
+- The DOMContentLoaded handler
+- Tier 1 controllers, font preload, and the init alerts
+- Tier 2 and tier 3 scheduling
 
 **network.test.js** - Network and collaboration
 
@@ -392,16 +391,15 @@ const debug = msg => {
 **uiModals.test.js** - User interface: Advanced utilities
 
 - Additional DOM utilities ($$$)
-- Grid creation and management
 - Tool preview rendering
 - Font selection interface
+- Modal controller
 - WebSocket connectivity UI
 
 **utils.test.js** - Utility functions
 
-- Helper functions
-- Data manipulation
-- Format conversions
+- Canvas creation
+- DOM selector shorthands
 
 **collabWorker.test.js** - Collaboration transport worker
 
@@ -419,12 +417,6 @@ const debug = msg => {
 **recentList.test.js** - Recent lists
 
 - Tolerant reads, deduped and trimmed writes, storage failures
-
-**xbinPersistence.test.js** - XBin format persistence
-
-- Embedded font handling
-- Palette persistence
-- File roundtrip testing
 
 > [!NOTE]
 > **Test File Organization Best Practices**
@@ -658,8 +650,6 @@ fixture through the editor's Connect form and draws both ways.
 - **Tier B, synthetic fixtures.** `generators.js` builds seeded, deterministic fixtures for the edge cases wild files cannot guarantee: odd SAUCE records, ice color ANSI, 132-column and large documents, XBin RLE with all four run types, 512-glyph XBin fonts, and UTF-8 multibyte rows. No binary blobs live in the repo. `lhaFixture.ts` and `zipFixture.ts` build archive fixtures for the core and client archive tests.
 - **Tier C, bulk conformance.** Not run here. It targets the owner's pinned mirror of the sixteencolors archive and is manual only; `tests/fixtures/README.md` holds the pin, the fetch mechanics, and the rules (never hit `api.16colo.rs` or `asciiarena.se` from automation).
 
-Known codec defects are pinned with `it.fails` and a comment. When a fix lands, the test flips to red; promote it to a plain `it()`.
-
 ## Parity (Frozen v2 Engine)
 
 `tests/parity/v2ReferenceEngine.js` is the doc-mutation subset of the v2 `canvas.js`, extracted verbatim minus rendering, collab, and font concerns: the u16 image buffer, draw entry points, half-block painting, mirror tables, the bright-background optimize pass, chunked undo and redo, areas, and network `quickDraw`. It preserves v2 quirks on purpose, including the swapped half-block constant names, and must not be improved.
@@ -697,17 +687,21 @@ it('should update element', () => {
 
 **Testing events:**
 
+Drive the shipped module's own listeners. A handler written inside the test only proves that jsdom dispatches events.
+
 ```javascript
-import { fireEvent } from '@testing-library/dom';
+import userEvent from '@testing-library/user-event';
+import { createPaintShortcuts } from '../../src/js/client/ui.js';
 
-it('should handle events', () => {
-	const handler = vi.fn();
-	const button = document.createElement('button');
-	button.addEventListener('click', handler);
+it('clicks the bound tool on its shortcut key', async () => {
+	const brush = document.createElement('button');
+	const onClick = vi.fn();
+	brush.addEventListener('click', onClick);
+	createPaintShortcuts({ f: brush });
 
-	fireEvent.click(button);
+	await userEvent.setup().keyboard('f');
 
-	expect(handler).toHaveBeenCalled();
+	expect(onClick).toHaveBeenCalledTimes(1);
 });
 ```
 
@@ -846,7 +840,7 @@ Results are saved to:
 
 - **HTML Report:** `tests/results/playwright-report/`
 - **JSON Results:** `tests/results/e2e/results.json`
-- **Videos/Screenshots:** `tests/results/e2e/`
+- **Screenshots and traces:** `tests/results/e2e/`
 
 **View HTML report:**
 
@@ -1003,18 +997,22 @@ The E2E test suite includes reusable helper modules in `tests/e2e/helpers/`:
 
 **editorHelpers.js** - Common editor utilities
 
-- `waitForEditorReady(page, timeout)` - Wait for canvas container and initialization
+- `bridgeReady(page, timeout)` - Wait for the wired editor and the `window.__t0wnz` bridge, which exists only on `/?test`
+- `waitForEditorReady(page, timeout)` - Wait for the wired editor without the bridge
+- `clickTool(page, id)` - Open the tool's group flyout if needed, click the tool, and wait for it to light
+- `clickHistoryAction(page, id)`, `clickViewToggle(page, id)`, `openMenu(page, tab)` - Reach controls that live in flyouts and menus
+- `cellCenter(page, x, y)`, `tap(page, x, y)`, `drag(page, from, to, steps)` - Point at, click, and drag across canvas cells
+- `readBlock(page, x, y)`, `readRegion(page, x0, y0, x1, y1)` - Read cells back through the bridge
+- `writeText(page, x, y, text, fg, bg)` - Seed cells as one undo stroke without a tool
+- `cursorAt(page)`, `readColors(page)` - Read the keyboard cursor and the current colors
+- `setLineMode`, `setSquareMode`, `setCircleMode`, `setFill`, `setAsciiWidth`, `setAttribSize` - Change tool settings
+- `parkToolSettings(page)` - Move the tool settings window off the canvas before `page.goto`
 - `focusCanvas(page)` - Click viewport to establish keyboard focus
-- `getCanvasText(page)` - Retrieve canvas text content (via window API if available)
 - `getViewportScrollPosition(page)` - Get current viewport scroll coordinates
-- `getPositionInfo(page)` - Read position info text from UI
-- `getActiveTool(page)` - Determine which tool is currently active
 
 **openFile.js** - File loading utilities
 
-- `openFile(page, filePath)` - Open file using file input element and setInputFiles
-- `openFileViaDragDrop(page, filePath)` - Placeholder for drag-and-drop file opening
-- `openFileViaURL(page, fileURL)` - Open file via window.Load API (if exposed)
+- `openFile(page, filePath)` - Open a file through the `#openFile` input and wait for the loading modal to close
 
 **Example usage:**
 
@@ -1049,20 +1047,19 @@ Goldens are valid only from the CI container (Linux, SwiftShader, device scale f
 
 ```javascript
 import { test, expect } from '@playwright/test';
+import { bridgeReady, readRegion } from './helpers/editorHelpers.js';
 
 test.describe('Feature Name', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.goto('/');
-		await page.waitForSelector('#canvas-container', { timeout: 10000 });
-		await page.waitForTimeout(1000);
+		await page.goto('/?test');
+		await bridgeReady(page);
 	});
 
-	test('should do something', async ({ page }) => {
-		const element = page.locator('#my-element');
-		await element.click();
-		await page.waitForTimeout(300);
+	test('types into the canvas', async ({ page }) => {
+		// keyboard mode is the boot tool, its cursor parked at 0,0
+		await page.keyboard.type('abc');
 
-		await expect(element).toBeVisible();
+		await expect.poll(() => readRegion(page, 0, 0, 2, 0)).toEqual(['abc']);
 	});
 });
 ```
@@ -1070,10 +1067,10 @@ test.describe('Feature Name', () => {
 **Best practices:**
 
 1. Wait for elements - ensure elements are ready
-2. Use timeouts - add delays after interactions
-3. Flexible selectors - use multiple selector strategies
+2. Wait on state, not time - poll the bridge with `expect.poll()` or use a web-first assertion; a fixed `waitForTimeout` flakes on slow machines, so keep it for timing the app itself measures, such as the palette's double-tap window
+3. Read the result back - check cells through the `/?test` bridge, not the absence of `.error` elements
 4. Test isolation - each test should be independent
-5. Error handling - gracefully handle missing elements
+5. Fail loudly - assert that an element exists; an `isVisible()` guard turns a broken feature into a pass
 6. Clean up - use beforeEach and afterEach
 7. Meaningful assertions - test user-visible behavior
 
@@ -1172,20 +1169,20 @@ Tests run automatically on:
 **Tests timeout:**
 
 - Increase timeout in playwright.config.js
-- Add longer waits in specific tests
+- Check that the page was opened with `/?test`, or `bridgeReady` waits for a bridge that never loads
 - Check if application loads slowly
 
 **Tests are flaky:**
 
-- Add explicit waits (waitForTimeout, waitForSelector)
-- Use waitForLoadState('networkidle')
+- Replace fixed waits with a condition: `expect.poll()` over a bridge read, a web-first assertion, or `page.waitForFunction()`
+- Switch tools through `clickTool`, so a stroke never lands before a lazy tool loads
 - Increase retry count in config
 
-**Screenshots/videos not captured:**
+**Screenshots or traces not captured:**
 
 - Check outputDir in playwright.config.js
 - Verify write permissions in tests/results/
-- Ensure tests actually fail (screenshots only on failure by default)
+- Ensure tests actually fail (screenshots only on failure, traces only on the first retry)
 
 ## Resources
 

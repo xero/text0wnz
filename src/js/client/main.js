@@ -53,7 +53,7 @@ import {
 	createPalettePreview,
 	createPalettePicker,
 } from './palette.js';
-// Only import keyboard tools statically (default mode)
+// keyboard tools load statically (the boot mode); the rest lazy-load
 import {
 	createCursor,
 	createSelectionCursor,
@@ -61,9 +61,13 @@ import {
 	createKeyboardController,
 	createPasteTool,
 } from './keyboard.js';
+import { settlesWithin } from './visibleWait.js';
 
 const CACHE_ID = 'text0wnz-shared-files';
 const CACHE_DATA = '/shared-file-data';
+// the recovery reset reloads after this even when storage never
+// answers: a hung IndexedDB open is one of the wedges it exists for
+const RESET_WAIT_MS = 3000;
 
 let htmlDoc;
 let bodyContainer;
@@ -174,9 +178,8 @@ const openHandler = (file, opts = {}) => {
 		openFile.value = '';
 		return;
 	}
-	// archives unpack client-side; multi-entry ones raise a picker.
-	// created on first use: a PWA launch can deliver a file before the
-	// idle-time init tier builds the opener
+	// created on first use: a PWA launch can deliver an archive before
+	// the idle-time init tier builds the opener
 	if (isArchiveFile(file)) {
 		archiveOpener ??= createArchiveOpener({ openFile: openHandler });
 		archiveOpener?.open(file);
@@ -218,15 +221,7 @@ const openHandler = (file, opts = {}) => {
 	};
 	Load.file(
 		file,
-		async (
-			columns,
-			rows,
-			imageData,
-			iceColors,
-			letterSpacing,
-			fontName,
-			docNative,
-		) => {
+		async (letterSpacing, fontName, doc) => {
 			if (seq !== openSeq) {
 				return;
 			}
@@ -246,24 +241,12 @@ const openHandler = (file, opts = {}) => {
 				if (seq !== openSeq) {
 					return;
 				}
-				if (docNative) {
-					// tnd/dur/0wnz: plane-native load keeps truecolor and
-					// frames; legacy consumers read the lossy u16 mirror
-					if (typeof letterSpacing === 'boolean') {
-						// setDocData has no spacing seam; an explicit SAUCE
-						// flag lands on the font like the u16 path's
-						State.font.setLetterSpacing(letterSpacing);
-					}
-					State.textArtCanvas.setDocData(docNative);
-				} else {
-					State.textArtCanvas.setImageData(
-						columns,
-						rows,
-						imageData,
-						iceColors,
-						letterSpacing,
-					);
+				// setDocData has no spacing seam, so an explicit SAUCE flag
+				// lands on the font first
+				if (typeof letterSpacing === 'boolean') {
+					State.font.setLetterSpacing(letterSpacing);
 				}
+				State.textArtCanvas.setDocData(doc);
 				// the reset event fires only on REAL loads: onOpenedFile
 				// also rides buffer swaps (row ops, collab resyncs) which
 				// must never re-home the cursor, selection, or minimap
@@ -272,7 +255,7 @@ const openHandler = (file, opts = {}) => {
 				dispatchingOwnOpen = false;
 				// tier-3 init assigns this; a share-target open on a slow
 				// device lands first and must not abort the UI resets
-				palettePicker?.updatePalette(); // ANSi
+				palettePicker?.updatePalette();
 				openFile.value = '';
 				viewport.scrollLeft = viewport.scrollTop = 0;
 			};
@@ -282,9 +265,9 @@ const openHandler = (file, opts = {}) => {
 				if (seq !== openSeq) {
 					return;
 				}
-				// current is the controller's accessor, not a field: the
-				// old reference compare never matched and left the
-				// loading modal up after every file load
+				// current is the controller's accessor, not a field: a
+				// bare reference compare never matches and strands the
+				// loading modal after every file load
 				if (State.modal.isOpen() && State.modal.current() === 'loading') {
 					State.modal.close();
 				}
@@ -304,7 +287,7 @@ const openHandler = (file, opts = {}) => {
 				return; // setFont runs applyData
 			}
 			applyData();
-			palettePicker?.updatePalette(); // XB
+			palettePicker?.updatePalette();
 			closeModal();
 		},
 		{ ...opts, onError },
@@ -343,13 +326,12 @@ const handleFileShare = async () => {
 
 		if (response) {
 			const filename = response.headers.get('X-Filename') || 'untitled.txt';
-			const fileSize = response.headers.get('X-File-Size') || '0';
 			const blob = await response.blob();
 			const file = new File([blob], filename, {
 				type:
 					response.headers.get('Content-Type') || 'application/octet-stream',
 			});
-			return { file, filename, fileSize };
+			return { file, filename };
 		}
 
 		return null;
@@ -359,7 +341,7 @@ const handleFileShare = async () => {
 	}
 };
 
-// Debounce to avoid saving too frequently during drawing
+// every keypress and stroke end calls this; one write per pause
 const save = () => {
 	if (saveTimeout) {
 		clearTimeout(saveTimeout);
@@ -368,23 +350,6 @@ const save = () => {
 		State.saveToLocalStorage();
 		saveTimeout = null;
 	}, 300);
-	saveUndoOnIdle();
-};
-
-// Undo history is heavy; persist it only once editing goes idle
-let undoSaveTimeout = null;
-const saveUndoOnIdle = () => {
-	if (undoSaveTimeout) {
-		clearTimeout(undoSaveTimeout);
-	}
-	undoSaveTimeout = setTimeout(() => {
-		undoSaveTimeout = null;
-		if ('requestIdleCallback' in window) {
-			requestIdleCallback(() => State.saveUndoHistory());
-		} else {
-			State.saveUndoHistory();
-		}
-	}, 3000);
 };
 
 const fetchTutorial = async url => {
@@ -407,11 +372,7 @@ const fetchTutorial = async url => {
 		}
 		const file = new File([blob], filename, { type: 'application/octet-stream' });
 
-		if (
-			typeof openHandler === 'function' &&
-			State?.textArtCanvas &&
-			!bodyContainer?.classList.contains('loading')
-		) {
+		if (State.textArtCanvas && !bodyContainer?.classList.contains('loading')) {
 			State.modal.loading('Reloading editor from file...');
 			openHandler(file);
 		} else {
@@ -471,6 +432,29 @@ const handleIOS = () => {
 	navFullscreen.classList.toggle('disabled', isWindowed);
 };
 
+// the update question waits while another modal shows, since replacing
+// one acts as its Cancel (the Sauce Editor drops its typing). The collab
+// invitation is the exception: the controller hands it back once the
+// question is answered. A poll, not a close hook, because one modal can
+// follow another before the question gets its turn
+let updateOffer = 0;
+const offerUpdate = () => {
+	clearTimeout(updateOffer);
+	updateOffer = 0;
+	if (!swRegistration?.waiting || !navigator.serviceWorker?.controller) {
+		return;
+	}
+	const showing = State.modal.current();
+	if (showing === 'update') {
+		return;
+	}
+	if (showing && showing !== 'choice') {
+		updateOffer = setTimeout(offerUpdate, 1000);
+		return;
+	}
+	State.modal.open('update');
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
 	if ('serviceWorker' in navigator) {
 		navigator.serviceWorker.register('service.js').then(reg => {
@@ -479,7 +463,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				// a new worker is already waiting: ask instead of activating
 				// under a live session (activation evicts the old assets this
 				// page may still lazy-load)
-				State.modal.open('update');
+				offerUpdate();
 			} else if (reg.waiting) {
 				reg.waiting.postMessage({ type: 'SKIP_WAITING' });
 			}
@@ -487,9 +471,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				const installingWorker = reg.installing;
 				installingWorker.onstatechange = () => {
 					if (installingWorker.state === 'installed') {
-						if (navigator.serviceWorker.controller) {
-							State.modal.open('update');
-						}
+						offerUpdate();
 					}
 				};
 			};
@@ -519,7 +501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				console.log('[Share] File shared:', event.data.filename);
 				const waitForApp = () => {
 					return new Promise(resolve => {
-						if (State.textArtCanvas && openHandler) {
+						if (State.textArtCanvas) {
 							resolve();
 						} else {
 							setTimeout(() => waitForApp().then(resolve), 100);
@@ -529,9 +511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				await waitForApp();
 				const sharedFileData = await handleFileShare();
 				if (sharedFileData) {
-					pendingFile = sharedFileData.file;
-					openHandler(pendingFile);
-					pendingFile = null;
+					openHandler(sharedFileData.file);
 					caches
 						.open(CACHE_ID)
 						.then(cache => cache.delete(CACHE_DATA))
@@ -548,10 +528,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 	try {
 		FontCache.preloadCommonFonts();
 
-		State.startInitialization();
 		$$$$();
 
-		// Tier 1: Core UI and Canvas (most critical)
+		// Tier 1: core UI and canvas
 		State.modal = createModalController($('modal'));
 		State.palette = createDefaultPalette();
 		// before the canvas: the arena's first commit must find the table
@@ -564,10 +543,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 			$('delete'),
 		);
 		State.textArtCanvas = createTextArtCanvas(canvasContainer, () => {
-			// drop the loading state as soon as the canvas is minimally ready
 			bodyContainer.classList.remove('loading');
 
-			// Tier 2: use setTimeout to allow UI to respond
+			// Tier 2: a macrotask later, so the UI can respond first
 			setTimeout(() => {
 				State.positionInfo = createPositionInfo($('positionInfo'));
 				State.selectionCursor = createSelectionCursor(canvasContainer);
@@ -575,7 +553,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				State.selectionTool = createSelectionTool();
 
 				// zoom controller first (pinch/wheel/focal anchoring), then
-				// the slider UI that routes through it
+				// the button UI that routes through it
 				const viewportElement = $('viewport');
 				if (viewportElement) {
 					createZoomController(viewportElement);
@@ -624,7 +602,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 				document.addEventListener('onPanelLayout', () => fitGlyphs());
 				armPixelRatioWatch(() => fitGlyphs());
 
-				// Tier 3: Secondary tools - defer with requestIdleCallback
+				// Tier 3: secondary tools, at idle
 				const initSecondaryTools = () => {
 					State.toolPreview = createToolPreview($('toolPreview'));
 					State.title = 'Untitled';
@@ -644,7 +622,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 						],
 						async _deps => {
 							await initializeAppComponents();
-							// Signal that every control is wired up (used by e2e tests)
+							// the e2e tests' cue that every control is wired up
 							bodyContainer.dataset.ready = 'true';
 							// Opt-in instrumentation, never part of the normal boot path
 							const toolParams = new URLSearchParams(window.location.search);
@@ -675,26 +653,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 const initializeAppComponents = async () => {
-	// a pending launch file wins over the autosave restore
-	if (!pendingFile) {
-		State.restoreStateFromLocalStorage().then(() => {
-			// the restore's loading modal clobbers a pending update prompt,
-			// and one cancel would then pin the old worker's stale chunks
-			// through every future reload: re-offer once the modal is free
-			const reofferUpdate = () => {
-				if (!swRegistration?.waiting || !navigator.serviceWorker.controller) {
-					return;
-				}
-				if (State.modal.current()) {
-					setTimeout(reofferUpdate, 1000);
-					return;
-				}
-				State.modal.open('update');
-			};
-			reofferUpdate();
-		});
+	// a launch or shared file wins over the autosave restore, whose doc
+	// and font land whenever its reads finish, over any file opened first
+	const shared =
+		!pendingFile &&
+		new URLSearchParams(window.location.search).get('source') === 'share'
+			? await handleFileShare()
+			: null;
+	if (!pendingFile && !shared) {
+		// the restore's loading modal clobbers a pending update prompt,
+		// and one cancel would then pin the old worker's stale chunks
+		// through every future reload: offer it again after
+		State.restoreStateFromLocalStorage().then(offerUpdate);
 	}
-	// iOS quirks
 	if (isIOS) {
 		openFile.setAttribute('accept', '*/*');
 		// track state to offset traffic lights
@@ -722,8 +693,8 @@ const initializeAppComponents = async () => {
 	onClick($('menuTabEdit'), () => showMenuTab('edit'));
 	onClick($('fileMenu'), () => {
 		showMenuTab('file');
-		// the collapsible groups greet every open folded, so the menu
-		// starts short no matter how the last visit left them
+		// groups fold on every open so the menu starts short no matter
+		// how the last visit left them
 		$('mainMenu')
 			.querySelectorAll('details[open]')
 			.forEach(group => {
@@ -732,7 +703,6 @@ const initializeAppComponents = async () => {
 		const opts = { flush: true };
 		State.flyouts.toggle('menu', $('mainMenu'), $('fileMenu'), opts);
 	});
-	// an item press acts through its own handler and shuts the menu
 	$('mainMenu').addEventListener('click', e => {
 		if (e.target.closest('.menuItem')) {
 			State.flyouts.close();
@@ -742,6 +712,9 @@ const initializeAppComponents = async () => {
 		State.modal.open('warning');
 	});
 	onClick($('warningYes'), async () => {
+		// the veil replaces the warning, so a second Yes cannot start a
+		// second New while the first one loads its font
+		State.modal.loading();
 		bodyContainer.classList.add('loading');
 		State.clearLocalStorage();
 		Load.resetSauceFlags();
@@ -751,7 +724,9 @@ const initializeAppComponents = async () => {
 			palettePreview.updatePreview();
 			await State.textArtCanvas.setFont('CP437 8x16', () => {
 				State.font.setLetterSpacing(false);
-				State.textArtCanvas.resize(80, 25);
+				// clear() drops the history next, so a resize step would
+				// capture every cut cell only to throw it away
+				State.textArtCanvas.resize(80, 25, { undoable: false });
 				State.textArtCanvas.clear();
 				State.textArtCanvas.setIceColors(false);
 				// New is a real load: ride the same reset event as the
@@ -766,9 +741,6 @@ const initializeAppComponents = async () => {
 	onClick($('open'), () => {
 		openFile.click();
 	});
-	// both artpack site browsers open straight into the editor; one
-	// landing modal fronts them from a single File menu entry and
-	// remembers which site the artist was last inside
 	// exitToLanding closes over artpacks before its const below exists;
 	// safe because createTrail only calls it from user-driven back()
 	const exitToLanding = () => artpacks?.showLanding();
@@ -783,14 +755,11 @@ const initializeAppComponents = async () => {
 	const artpacks = createArtpacksLanding({ sixteen, arena });
 	onClick($('browseArtpacks'), () => artpacks?.show());
 
-	// native zip and lha opens route through the same unpack path
 	archiveOpener ??= createArchiveOpener({ openFile: openHandler });
 
-	// ES-module plugin surface (durdraw lineage)
 	const pluginManager = createPluginManager();
 	onClick($('pluginsMenu'), () => pluginManager?.show());
 
-	// reference-image overlay for tracing
 	referenceImage = createReferenceImage({
 		// the async restore reopens the panel; the nav button must light
 		// up with it or the menu reads as off while the overlay shows
@@ -828,7 +797,6 @@ const initializeAppComponents = async () => {
 	onClick($('copy'), State.pasteTool.copy);
 	onClick($('paste'), State.pasteTool.paste);
 	onClick($('systemPaste'), State.pasteTool.systemPaste);
-	// the bar's paste submenu mirrors the Edit menu's variants
 	onClick($('pasteTransparent'), State.pasteTool.pasteTransparent);
 	onClick($('pasteUnder'), State.pasteTool.pasteUnder);
 	onClick($('delete'), State.pasteTool.deleteSelection);
@@ -842,18 +810,14 @@ const initializeAppComponents = async () => {
 	onClick($('navUndo'), State.textArtCanvas.undo);
 	onClick($('navRedo'), State.textArtCanvas.redo);
 
-	// charset picker (durdraw lineage); the keyboard section's charset
-	// button opens the same dialog as the File menu item
 	const charsetPicker = createCharsetPicker();
 	onClick($('charsetPicker'), charsetPicker.show);
 	onClick($('charsetButton'), charsetPicker.show);
 
-	// extended colors: the strip's 256/RGB expansion panel
 	createColorPanel();
 
-	// frames timeline + playback + onion skin; the toolbar buttons ride
-	// createSettingToggle so the 'enabled' highlight persists across
-	// toolbar view switches, like the grid button
+	// a toggle, not a Toolbar tool: its 'enabled' highlight must survive
+	// tool switches, like the grid button's
 	framesPanel = createFramesPanel();
 	if (framesPanel) {
 		createSettingToggle($('navFrames'), framesPanel.isOpen, open => {
@@ -897,7 +861,6 @@ const initializeAppComponents = async () => {
 		);
 	}
 
-	// minimap (GL-only)
 	minimap = createMinimap();
 	if (minimap) {
 		createSettingToggle($('navMinimap'), minimap.isVisible, visible =>
@@ -907,7 +870,6 @@ const initializeAppComponents = async () => {
 		createAutoScroller();
 	}
 
-	// Credz
 	onClick($('about'), _ => {
 		State.modal.open('about');
 	});
@@ -944,8 +906,8 @@ const initializeAppComponents = async () => {
 		});
 	});
 
-	// once, outside the open handler: every open used to stack another
-	// cancel listener and discard its remover
+	// bound once, outside the open handler, or every open would stack
+	// another cancel listener with no remover
 	onClick($('tutorialsCancel'), _ => {
 		State.modal.close();
 	});
@@ -965,17 +927,22 @@ const initializeAppComponents = async () => {
 			return;
 		}
 		// no update pending (modal opened from the menu): scorched-earth
-		// refresh as a manual recovery tool
-		State.clearLocalStorage();
-		if ('caches' in window) {
-			window.caches.keys().then(keys => {
-				Promise.all(keys.map(key => window.caches.delete(key))).then(() => {
-					window.location.reload();
-				});
-			});
-		} else {
-			window.location.reload();
-		}
+		// refresh as a manual recovery tool. The journal's close queues
+		// behind its wipe, so nothing writes the art back before the reload
+		const dropCaches = async () => {
+			if ('caches' in window) {
+				const keys = await window.caches.keys();
+				await Promise.all(keys.map(key => window.caches.delete(key)));
+			}
+		};
+		settlesWithin(
+			Promise.allSettled([
+				State.clearLocalStorage(),
+				State.textArtCanvas.stopJournal(),
+				dropCaches(),
+			]),
+			RESET_WAIT_MS,
+		).then(() => window.location.reload());
 	});
 	onReturn(reload, reload);
 
@@ -984,11 +951,6 @@ const initializeAppComponents = async () => {
 
 	onFileChange(openFile, openHandler);
 	createDragDropController(openHandler, $('dragdrop'));
-
-	onClick(navSauce, () => {
-		State.flyouts.close();
-		State.modal.open('sauce');
-	});
 
 	// the sidebar sauce block mirrors the modal fields, which stay the
 	// single source of truth (file.js and network.js write them directly)
@@ -1012,14 +974,47 @@ const initializeAppComponents = async () => {
 	});
 	updateSauceDisplay();
 
+	// the editor is a draft: room SAUCE waits while it shows, Done keeps
+	// it, and any other close puts back what it opened with. A document
+	// that opens under it brings its own SAUCE, which a close then keeps
+	let sauceDraft = null;
+	const sauceFields = () => [
+		sauceTitle.value,
+		sauceAuthor.value,
+		sauceGroup.value,
+		Load.commentsOf(sauceComments),
+	];
+	document.addEventListener('onNewDocument', () => {
+		if (sauceDraft) {
+			sauceDraft = sauceFields();
+		}
+	});
+	onClick(navSauce, () => {
+		State.flyouts.close();
+		State.modal.open('sauce');
+		sauceDraft = sauceFields();
+		State.network?.holdSauce?.();
+		State.modal.onClose(() => {
+			if (sauceDraft) {
+				[sauceTitle.value, sauceAuthor.value, sauceGroup.value] = sauceDraft;
+				Load.fillComments(sauceComments, sauceDraft[3]);
+				enforceMaxBytes();
+				updateSauceDisplay();
+				sauceDraft = null;
+			}
+			State.network?.releaseSauce?.();
+		});
+	});
+
 	onClick(sauceDone, () => {
+		sauceDraft = null;
 		State.title = sauceTitle.value;
 		// collab peers hear SAUCE edits (type 12 persists server-side)
 		State.network?.sendSauce?.({
 			title: sauceTitle.value,
 			author: sauceAuthor.value,
 			group: sauceGroup.value,
-			comments: sauceComments.value,
+			comments: Load.commentsOf(sauceComments),
 		});
 		State.modal.close();
 		updateSauceDisplay();
@@ -1029,13 +1024,13 @@ const initializeAppComponents = async () => {
 	onReturn(sauceTitle, sauceDone);
 	onReturn(sauceGroup, sauceDone);
 	onReturn(sauceAuthor, sauceDone);
-	onReturn(sauceComments, sauceDone);
+	onReturn(sauceComments, sauceDone, { shiftBreaks: true });
 	const paintShortcuts = createPaintShortcuts({
 		d: $('defaultColor'),
 		q: swapColors,
 		k: $('keyboard'),
 		// f lands on the block brush itself: the group button only opens
-		// a flyout now and never picks a tool
+		// a flyout and never picks a tool
 		f: $('halfblock'),
 		b: $('characterBrush'),
 		n: $('fill'),
@@ -1076,12 +1071,10 @@ const initializeAppComponents = async () => {
 			State.selectionTool.disable();
 		},
 	);
-	// the floating action bar follows the selection rect itself
 	State.selectionBar = createSelectionBar();
 
 	onClick($('undo'), State.textArtCanvas.undo);
 	onClick($('redo'), State.textArtCanvas.redo);
-	// the phone top strip carries its own pair
 	onClick($('stripUndo'), State.textArtCanvas.undo);
 	onClick($('stripRedo'), State.textArtCanvas.redo);
 	onClick($('resolution'), () => {
@@ -1120,7 +1113,6 @@ const initializeAppComponents = async () => {
 	onReturn(columnsInput, resizeApply);
 	onReturn(rowsInput, resizeApply);
 
-	// Edit action menu items
 	onClick($('insertRow'), keyboard.insertRow);
 	onClick($('deleteRow'), keyboard.deleteRow);
 	onClick($('insertColumn'), keyboard.insertColumn);
@@ -1133,8 +1125,6 @@ const initializeAppComponents = async () => {
 	onClick($('eraseColumnEnd'), keyboard.eraseToEndOfColumn);
 	onClick(menuFullscreen, toggleFullscreen);
 	onClick(navFullscreen, toggleFullscreen);
-	// the glyph tracks the BROWSER's state (F11, Esc, OS gestures),
-	// independent of which button toggled it
 	armFullscreenIcon(navFullscreen);
 
 	onClick($('defaultColor'), () => {
@@ -1194,9 +1184,10 @@ const initializeAppComponents = async () => {
 		},
 	);
 
+	// a font change replaces State.font, so the getter looks it up per call
 	const nav9pt = createSettingToggle(
 		$('nav9pt'),
-		State.font.getLetterSpacing,
+		() => State.font.getLetterSpacing(),
 		newLetterSpacing => {
 			State.font.setLetterSpacing(newLetterSpacing);
 			State.network?.sendLetterSpacingChange?.(newLetterSpacing);
@@ -1214,14 +1205,20 @@ const initializeAppComponents = async () => {
 		const currentFont = State.textArtCanvas.getCurrentFontName();
 		fontDisplay.textContent = currentFont;
 		fontSelect.setValue(currentFont);
-		nav9pt.sync(State.font.getLetterSpacing, State.font.setLetterSpacing);
+		nav9pt.update();
 		navICE.update();
 	};
-	['onPaletteChange', 'onFontChange', 'onXBFontLoaded', 'onOpenedFile'].forEach(
-		e => {
-			document.addEventListener(e, updateFontDisplay);
-		},
-	);
+	// New resets iCE and 9pt after its font change fires, so the chips
+	// resync on onNewDocument too
+	[
+		'onPaletteChange',
+		'onFontChange',
+		'onXBFontLoaded',
+		'onOpenedFile',
+		'onNewDocument',
+	].forEach(e => {
+		document.addEventListener(e, updateFontDisplay);
+	});
 	const syncFavStar = () => {
 		$('fontFavToggle').innerHTML = fontSelect.isFavorite()
 			? '&#9733;'
@@ -1253,9 +1250,8 @@ const initializeAppComponents = async () => {
 	const grid = createGrid($('grid'));
 	createSettingToggle($('navGrid'), grid.isShown, grid.show);
 
-	// everything past the default keyboard mode lazy-loads on first click
-	// the group buttons are not tools: the first click opens the group's
-	// flyout without switching, and the same click closes it again
+	// group buttons are not tools: they toggle their flyout and never
+	// switch the active tool
 	onClick($('brushes'), () =>
 		State.flyouts.toggle('brushes', $('brushToolbar'), $('brushes')));
 	onClick($('shapes'), () =>
@@ -1298,11 +1294,10 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: halfblock.enable,
 			onBlur: halfblock.disable,
-			enable: halfblock.enable,
 		};
 	});
 
-	// Track loaded brush tools for modal focus events
+	// hoisted: the sample tool shares both brush controllers
 	let shadeBrush = null;
 	let characterBrush = null;
 
@@ -1336,9 +1331,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: shadeBrush.enable,
 			onBlur: shadeBrush.disable,
-			enable: shadeBrush.enable,
-			ignore: shadeBrush.ignore,
-			unignore: shadeBrush.unignore,
 		};
 	});
 
@@ -1347,9 +1339,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: characterBrush.enable,
 			onBlur: characterBrush.disable,
-			enable: characterBrush.enable,
-			ignore: characterBrush.ignore,
-			unignore: characterBrush.unignore,
 		};
 	});
 
@@ -1359,7 +1348,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: asciiBrush.enable,
 			onBlur: asciiBrush.disable,
-			enable: asciiBrush.enable,
 		};
 	});
 
@@ -1369,7 +1357,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: fill.enable,
 			onBlur: fill.disable,
-			enable: fill.enable,
 		};
 	});
 
@@ -1381,7 +1368,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: attributeBrush.enable,
 			onBlur: attributeBrush.disable,
-			enable: attributeBrush.enable,
 		};
 	});
 
@@ -1391,7 +1377,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: line.enable,
 			onBlur: line.disable,
-			enable: line.enable,
 		};
 	});
 
@@ -1401,7 +1386,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: square.enable,
 			onBlur: square.disable,
-			enable: square.enable,
 		};
 	});
 
@@ -1411,7 +1395,6 @@ const initializeAppComponents = async () => {
 		return {
 			onFocus: circle.enable,
 			onBlur: circle.disable,
-			enable: circle.enable,
 		};
 	});
 
@@ -1452,27 +1435,44 @@ const initializeAppComponents = async () => {
 		},
 	);
 
-	Toolbar.addLazy($('sample'), async () => {
-		const { createSampleTool } = await import('./freehandTools.js');
-		await ensureBrushesLoaded();
+	// Alt samples under every tool, so the sampler loads on the first
+	// Alt click as well as on the first #sample click
+	let samplerLoading = null;
+	const ensureSampler = () => {
+		samplerLoading ??= (async () => {
+			const { createSampleTool } = await import('./freehandTools.js');
+			await ensureBrushesLoaded();
+			return createSampleTool(
+				shadeBrush,
+				$('shadingBrush'),
+				characterBrush,
+				$('characterBrush'),
+			);
+		})().catch(error => {
+			samplerLoading = null;
+			throw error;
+		});
+		return samplerLoading;
+	};
+	State.sampleTool = {
+		sample: (x, halfBlockY) =>
+			ensureSampler()
+				.then(sampler => sampler.sample(x, halfBlockY, true))
+				.catch(error => console.error('[App] could not sample:', error)),
+	};
 
-		State.sampleTool = await createSampleTool(
-			shadeBrush,
-			$('shadingBrush'),
-			characterBrush,
-			$('characterBrush'),
-		);
+	Toolbar.addLazy($('sample'), async () => {
+		const sampler = await ensureSampler();
 		const focusSample = () => {
 			if (State.textArtCanvas.getMirrorMode()) {
 				State.textArtCanvas.setMirrorMode(false);
 				mirrorToggle.update();
 			}
-			State.sampleTool.enable();
+			sampler.enable();
 		};
 		return {
 			onFocus: focusSample,
-			onBlur: State.sampleTool.disable,
-			enable: focusSample,
+			onBlur: sampler.disable,
 		};
 	});
 
@@ -1503,7 +1503,6 @@ const initializeAppComponents = async () => {
 
 	viewportTap(viewport);
 
-	// Initialize chat before creating network handler
 	State.chat = createChatController(
 		$('chatButton'),
 		$('messageWindow'),
@@ -1548,7 +1547,7 @@ const initializeAppComponents = async () => {
 		try {
 			localStorage.setItem('darkMode', String(dark));
 		} catch {
-			// storage blocked: the preference just does not persist
+			// storage blocked: the preference does not persist
 		}
 	};
 	onClick(navDarkmode, darkToggle);
@@ -1566,35 +1565,20 @@ const initializeAppComponents = async () => {
 	document.addEventListener('onIceColorsChange', save);
 	document.addEventListener('onOpenedFile', save);
 
-	// the idle undo save may not have fired before the page goes away
-	document.addEventListener('visibilitychange', () => {
-		if (document.hidden) {
-			State.saveUndoHistory();
-		}
-	});
-	window.addEventListener('pagehide', () => {
-		State.saveUndoHistory();
-	});
-
 	if (pendingFile) {
 		openHandler(pendingFile);
 		pendingFile = null;
 		return; // a launch file preempts share-target handling
 	}
 
-	const urlParams = new URLSearchParams(window.location.search);
-	const source = urlParams.get('source');
-	if (source === 'share') {
-		const sharedFileData = await handleFileShare();
-		if (sharedFileData) {
-			console.log(`[Share] Opening shared file: ${sharedFileData.filename}`);
-			openHandler(sharedFileData.file);
-			caches
-				.open(CACHE_ID)
-				.then(cache => cache.delete(CACHE_DATA))
-				.catch(error =>
-					console.error('[Error] Failed to cleanup shared file cache:', error));
-		}
+	if (shared) {
+		console.log(`[Share] Opening shared file: ${shared.filename}`);
+		openHandler(shared.file);
+		caches
+			.open(CACHE_ID)
+			.then(cache => cache.delete(CACHE_DATA))
+			.catch(error =>
+				console.error('[Error] Failed to cleanup shared file cache:', error));
 	}
 };
 

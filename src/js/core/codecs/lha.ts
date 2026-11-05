@@ -1,11 +1,11 @@
 /**
- * Minimal LHA/LZH reader for the asciiarena.se in-app browser: enough
- * to open one piece out of an amiga ascii colly. Walks header levels
- * 0, 1, and 2 and decodes -lh0- (stored) and -lh5- (static huffman
- * over an 8KB LZSS window), which covers every entry in the arena's
- * archives (4,190 of them verified against this decoder). Every
- * extraction checks the header's CRC-16, so a rotten scene file fails
- * loud instead of rendering garbage.
+ * Minimal LHA/LZH reader for the aSCIIaRENA browser and native
+ * opens: enough to open one piece out of an amiga ascii colly. Walks
+ * header levels 0, 1, and 2 and decodes -lh0- (stored) and -lh5-
+ * (static huffman over an 8KB LZSS window), which covers every entry
+ * in the arena's archives (4,190 of them verified against this
+ * decoder). Every extraction checks the header's CRC-16, so a rotten
+ * scene file fails loud instead of rendering garbage.
  */
 
 import { CodecError } from './util.js';
@@ -26,7 +26,7 @@ export interface LhaEntry {
 	crc: number;
 }
 
-/** literal/length alphabet: 256 literals + match lengths 3..258 */
+/** literal/length alphabet: 256 literals + match lengths 3-256 */
 const NC = 510;
 /** code-length (temp) alphabet size */
 const NT = 19;
@@ -73,7 +73,6 @@ export const crc16 = (data: Uint8Array): number => {
 	return crc;
 };
 
-/** parse the header chain into an entry list */
 export const readLhaEntries = (bytes: Uint8Array): LhaEntry[] => {
 	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 	const entries: LhaEntry[] = [];
@@ -101,8 +100,8 @@ export const readLhaEntries = (bytes: Uint8Array): LhaEntry[] => {
 		if (level === 0 || level === 1) {
 			const headerEnd = pos + 2 + bytes[pos];
 			// the loop guard stops at pos + 21, one short of the name
-			// length byte: reading past the end made nameLength NaN, and
-			// NaN comparisons waved the torn-header guard through into a
+			// length byte: past the end nameLength is undefined, and the
+			// NaN comparisons below would wave a torn header through as a
 			// phantom entry
 			if (pos + 22 > bytes.length) {
 				throw new CodecError(`lha header torn at ${pos}`);
@@ -120,16 +119,17 @@ export const readLhaEntries = (bytes: Uint8Array): LhaEntry[] => {
 				dataOffset = headerEnd;
 				next = headerEnd + compressedSize;
 			} else {
-				// level 1 counts its extended headers inside the size
-				// field; the chain's sizes ride each block's last 2 bytes
+				// LHA §Level 0 and 1: level 1 counts its extended headers
+				// inside the size field; the chain's sizes ride each block's
+				// last 2 bytes
 				let ext = view.getUint16(headerEnd - 2, true);
 				let extTotal = 0;
 				let at = headerEnd;
 				while (ext) {
 					extTotal += ext;
 					at += ext;
-					// at only grows from headerEnd (>= 22), so at - 2 < 0 can
-					// never fire; the real tear check is the upper bound
+					// at only grows from headerEnd (>= pos + 2), so only the
+					// upper bound can tear
 					if (at > bytes.length) {
 						throw new CodecError(`lha header torn at ${pos}`);
 					}
@@ -145,8 +145,8 @@ export const readLhaEntries = (bytes: Uint8Array): LhaEntry[] => {
 				throw new CodecError(`lha header torn at ${pos}`);
 			}
 			crc = view.getUint16(pos + 21, true);
-			// the filename lives in extended headers: 0x01 name, 0x02
-			// directory prefix with 0xff separators
+			// LHA §Level 2: the filename lives in extended headers, 0x01
+			// name and 0x02 directory prefix with 0xff separators
 			let dir = '';
 			let at = pos + 24;
 			let ext = view.getUint16(at, true);
@@ -376,7 +376,6 @@ const decodeLh5 = (bytes: Uint8Array, entry: LhaEntry): Uint8Array => {
 	return out;
 };
 
-/** extract one entry's bytes (lh0 or lh5), CRC-verified */
 export const extractLhaEntry = (
 	bytes: Uint8Array,
 	entry: LhaEntry,

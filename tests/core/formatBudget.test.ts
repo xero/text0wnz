@@ -16,7 +16,6 @@ import {
 
 const makeDoc = () => {
 	const doc = createDocV3({ columns: 8, rows: 2 });
-	// classic cell
 	doc.setCell(0, 0, 0, {
 		glyph: glyphWord(65, 0),
 		fg: paletteColor(7),
@@ -33,7 +32,7 @@ describe('lintDocForFormat', () => {
 		}
 	});
 
-	it('utf8 and ownz hold unicode and truecolor without issues', () => {
+	it('utf8 holds unicode and truecolor without issues', () => {
 		const doc = makeDoc();
 		const han = doc.glyphTable.idFor(FONT_SLOT_UNSCII, 0x4e2d);
 		doc.setCell(0, 1, 0, {
@@ -42,7 +41,6 @@ describe('lintDocForFormat', () => {
 			bg: paletteColor(0),
 		});
 		expect(lintDocForFormat(doc, 'utf8').ok).toBe(true);
-		expect(lintDocForFormat(doc, 'ownz').ok).toBe(true);
 	});
 
 	it('flags the control positions the character writers substitute', () => {
@@ -58,8 +56,6 @@ describe('lintDocForFormat', () => {
 				report.issues.some(issue => issue.kind === 'control-lookalike'),
 			).toBe(true);
 		}
-		// ownz emits them verbatim
-		expect(lintDocForFormat(doc, 'ownz').ok).toBe(true);
 	});
 
 	it('counts unicode glyphs and extended colors for classic formats', () => {
@@ -83,8 +79,8 @@ describe('lintDocForFormat', () => {
 		expect(kinds['unicode-glyph'].count).toBe(1);
 		expect(kinds['unicode-glyph'].firstIndex).toBe(1);
 		expect(kinds['color-beyond-16'].count).toBe(2);
-		// the plain-text writer emits REAL codepoints: flagging unicode
-		// cells there was a false positive on every such export
+		// the plain-text writer emits REAL codepoints, so flagging unicode
+		// cells there is a false positive on every such export
 		const txt = lintDocForFormat(doc, 'txt');
 		expect(txt.ok).toBe(true);
 	});
@@ -265,7 +261,6 @@ describe('utf8-ext-blink', () => {
 		expect(report.ok).toBe(false);
 		const issue = report.issues.find(i => i.kind === 'utf8-ext-blink');
 		expect(issue?.count).toBe(1);
-		expect(lintDocForFormat(doc, 'ownz').ok).toBe(true);
 	});
 
 	it('stays quiet for 16c backgrounds and steady cells', () => {

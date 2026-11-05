@@ -56,7 +56,6 @@ const BLANKS = new Set([
 	0x3000, // ideographic space (wide, but a blank is a blank)
 ]);
 
-/** line breaks beyond CRLF/LF/CR: NEL plus the unicode separators */
 const NEWLINES = new Set(['\r\n', '\n', '\r', '\u0085', '\u2028', '\u2029']);
 
 export interface PasteTokens {
@@ -84,7 +83,6 @@ export const tokenizePasteText = (text: string): PasteTokens => {
 			continue;
 		}
 		if (
-			codepoint === 9 ||
 			codepoint < 32 ||
 			codepoint === 127 ||
 			// C1 controls have no glyph and flatten like C0 (NEL already

@@ -7,18 +7,17 @@
  */
 import State from './state.js';
 import { $, remountUses } from './ui.js';
+import { createTouchHold } from './touchHold.js';
 
 const LAYOUT_KEY = 'panelLayout';
 const LAYOUT_VERSION = 2;
 const LEGACY_TOOL_POS_KEY = 'toolSettingsPos';
 
 // z bands: floating modules 40+, drag ghost 90, selection bar 150,
-// flyouts and menus 200, toasts 210, drop overlay 220; dialogs ride
-// the top layer
+// flyouts and menus 200, drop overlay 220; dialogs ride the top layer
 const FLOAT_BASE_Z = 40;
 
-// below this width the layout becomes the phone shell: top strip,
-// drawer, minimap strip, bottom rail, and the tool settings sheet
+// the stylesheet's phone breakpoint: the two must flip together
 const PHONE_QUERY = '(max-width: 720px)';
 const isPhone = () =>
 	typeof window !== 'undefined' &&
@@ -53,10 +52,6 @@ const SHEET_TOP_GAP_PX = 46;
 // a first control row taller than this (the character map) peeks at a
 // usable slice instead of swallowing the screen
 const SHEET_PEEK_ROW_MAX_PX = 140;
-// a touch hold on a header this long opens the panel menu; wandering
-// past the slop is a drag or a scroll, never a hold
-const LONG_PRESS_MS = 500;
-const LONG_PRESS_SLOP_PX = 8;
 
 // presses on controls never start a drag; the header overrides, but
 // its own buttons keep their click behavior
@@ -455,9 +450,9 @@ const createPanelManager = () => {
 	};
 
 	/** The peek snap shows the sheet chrome plus exactly the first
-	 * control row of the visible section (the F-key row for the
-	 * keyboard). Content is top-anchored inside the bottom-anchored
-	 * sheet, so row offsets hold at any current height. */
+	 * control row of the visible section. Content is top-anchored
+	 * inside the bottom-anchored sheet, so row offsets hold at any
+	 * current height. */
 	const sheetPeek = el => {
 		const section = [...el.querySelectorAll('.modContent > div')].find(
 			div => !div.classList.contains('hide'),
@@ -490,8 +485,8 @@ const createPanelManager = () => {
 
 	// the sheet drag binds on the module itself (not the container):
 	// in sheet mode the element rides document.body, outside the
-	// container's drag machinery, and the demo's capture-on-handle
-	// pattern keeps moves flowing wherever the finger wanders
+	// container's drag machinery, and capturing on the handle keeps
+	// moves flowing wherever the finger wanders
 	let sheetDrag = null;
 	const armSheetDrag = el => {
 		el.addEventListener('pointerdown', e => {
@@ -555,9 +550,8 @@ const createPanelManager = () => {
 		el.addEventListener('pointercancel', endSheetDrag);
 	};
 
-	/** Abort a live sheet drag WITHOUT committing: the persistent
-	 * handle listeners gate on sheetDrag, so nulling it disarms them;
-	 * the capture releases and the pre-drag height comes back. */
+	/** Never commits: the persistent handle listeners gate on sheetDrag,
+	 * so nulling it disarms them. */
 	const cancelSheetDrag = () => {
 		if (!sheetDrag) {
 			return;
@@ -578,10 +572,10 @@ const createPanelManager = () => {
 	};
 
 	const layout = () => {
-		// every caller rebuilds DOM a live drag references; abort both
-		// drag kinds here instead of auditing eleven call sites (the
-		// end handlers null their state before calling layout, so
-		// commits pass through untouched)
+		// every caller rebuilds DOM a live drag references, so both drag
+		// kinds abort here rather than at each call site (the end
+		// handlers null their state before calling layout, so commits
+		// pass through untouched)
 		cancelDrag();
 		cancelSheetDrag();
 		const narrow = isNarrow();
@@ -703,7 +697,6 @@ const createPanelManager = () => {
 			void el.offsetWidth;
 			el.classList.add('flash');
 			if (el.classList.contains('dk')) {
-				// docked off-screen in a scrolled sidebar: bring it into view
 				const rect = el.getBoundingClientRect();
 				const host = sidebar.getBoundingClientRect();
 				if (rect.top < host.top) {
@@ -724,7 +717,6 @@ const createPanelManager = () => {
 		layout();
 	};
 
-	// ---- per-tool pins: follow semantics, every gesture retrains ----
 	const PIN_FIELDS = ['dk', 'x', 'y', 'w', 'h', 'sh'];
 
 	const snapshotPin = key => {
@@ -765,10 +757,9 @@ const createPanelManager = () => {
 		save();
 	};
 
-	/** Write the active tool's pin into the module record ahead of the
-	 * layout() the caller is about to run. Mirrors dockTo's
-	 * bookkeeping; legality guards are moot because the tool module is
-	 * big (always its own bar row) and neither grow nor floatOnly. */
+	/** Mirrors dockTo's bookkeeping ahead of the caller's layout().
+	 * Legality guards are moot because the tool module is big (always
+	 * its own bar row) and neither grow nor floatOnly. */
 	const applyPin = () => {
 		const pin = toolSub ? PINS[toolSub] : null;
 		if (!pin) {
@@ -840,7 +831,6 @@ const createPanelManager = () => {
 		}
 		layout();
 		flash(key);
-		// a tool switch re-measures the sheet's peek for the new section
 		if (key === 'tool') {
 			sheetToPeek();
 		}
@@ -878,7 +868,6 @@ const createPanelManager = () => {
 		layout();
 	};
 
-	// ---- docking without a pointer: the drag's outcomes as verbs ----
 	const dockTo = (key, dk) => {
 		const reg = registry.get(key);
 		const m = MOD[key];
@@ -922,15 +911,14 @@ const createPanelManager = () => {
 				(other === key || visibleOf(other)),
 		);
 
-	/** Move a module one slot among its dock's visible peers. The two
-	 * slots trade ln flags, so a bar row keeps its shape while the
-	 * occupants swap. On phones the peers are the stack mates instead,
-	 * and the hop is a splice: stack neighbors can sit far apart in
-	 * ORD, so a bare index swap could reshuffle the wide docks. The
-	 * splice can still carry the module past hidden wide dockmates
-	 * parked between the two stack slots, which reads the same on the
-	 * phone and stays a legal wide order. ln flags stay put because
-	 * rows are a wide-layout concept. */
+	/** When wide, the module swaps with its visible dock neighbor and the
+	 * two trade ln flags, so a bar row keeps its shape. On phones the
+	 * neighbor is a stack mate and the hop is a splice: stack neighbors
+	 * can sit far apart in ORD, so a bare index swap could reshuffle
+	 * the wide docks. The splice can still carry the module past hidden
+	 * wide dockmates parked between the two stack slots, which reads
+	 * the same on the phone and stays a legal wide order. ln flags stay
+	 * put because rows are a wide-layout concept. */
 	const nudge = (key, dir) => {
 		if (isNarrow()) {
 			const peers = narrowPeers(key);
@@ -966,7 +954,6 @@ const createPanelManager = () => {
 		flash(key);
 	};
 
-	// ---- the panel menu: right-click or the menu key on any panel ----
 	const menuEl = $('panelMenu');
 	let menuKey = null;
 
@@ -1030,8 +1017,7 @@ const createPanelManager = () => {
 		set('panelMoveUp', at <= 0);
 		set('panelMoveDown', at === -1 || at === peers.length - 1);
 		// the pin verb exists only for the tool module on wide layouts
-		// (the phone shell routes the sheet itself), labeled for the
-		// tool the panel is currently wearing
+		// (the phone shell routes the sheet itself)
 		const showPin = menuKey === 'tool' && !narrow && Boolean(toolSub);
 		const pinItem = $('panelPin');
 		if (pinItem) {
@@ -1058,73 +1044,35 @@ const createPanelManager = () => {
 		State.flyouts.show('panelMenu', menuEl, from, at ? { at } : {});
 	};
 
-	// a touch hold on the header opens the same menu: iOS never
-	// synthesizes contextmenu for a touch hold, and Android's native
-	// one arrives wrapped in selection chrome, so the hold gets its
-	// own timer; mice, pens and trackpads keep the real contextmenu
 	const armLongPress = (key, reg) => {
 		const head = reg.header;
 		if (!head) {
 			return;
 		}
-		let hold = null;
+		const hold = createTouchHold();
 		let swallowClick = false;
-		const disarm = () => {
-			if (hold) {
-				clearTimeout(hold.timer);
-				hold = null;
-			}
-		};
 		head.addEventListener('pointerdown', e => {
 			swallowClick = false;
-			if (e.pointerType !== 'touch' || !e.isPrimary) {
-				return;
-			}
 			if (e.target.closest('button') || !menuAllowed(key)) {
 				return;
 			}
-			disarm();
-			const { clientX: x, clientY: y, pointerId } = e;
-			hold = {
-				x,
-				y,
-				pointerId,
-				timer: setTimeout(() => {
-					hold = null;
-					// a wide drag past its threshold captured the pointer, so
-					// the slop guard here went blind; the hold must never
-					// shoot a live drag down, and an armed-only drag just
-					// stands aside for the menu
-					if (drag?.started) {
-						return;
-					}
-					swallowClick = true;
-					cancelDrag();
-					if (!State.flyouts?.isOpen?.('panelMenu')) {
-						openPanelMenu(key, reg.shade || reg.el, { x, y });
-					}
-				}, LONG_PRESS_MS),
-			};
+			const { clientX: x, clientY: y } = e;
+			hold.arm(e, () => {
+				// a wide drag past its threshold captured the pointer, so
+				// the slop guard here went blind; the hold must never
+				// shoot a live drag down, and an armed-only drag just
+				// stands aside for the menu
+				if (drag?.started) {
+					return;
+				}
+				swallowClick = true;
+				cancelDrag();
+				if (!State.flyouts?.isOpen?.('panelMenu')) {
+					openPanelMenu(key, reg.shade || reg.el, { x, y });
+				}
+			});
 		});
-		head.addEventListener('pointermove', e => {
-			if (
-				hold &&
-				Math.hypot(e.clientX - hold.x, e.clientY - hold.y) >
-				LONG_PRESS_SLOP_PX
-			) {
-				disarm();
-			}
-		});
-		// lifts land on the document even when a drag's pointer capture
-		// retargets them away from the header; a hold must never survive
-		// its own finger
-		const disarmOnLift = e => {
-			if (hold && e.pointerId === hold.pointerId) {
-				disarm();
-			}
-		};
-		document.addEventListener('pointerup', disarmOnLift, true);
-		document.addEventListener('pointercancel', disarmOnLift, true);
+		head.addEventListener('pointermove', hold.move);
 		// the finger lift after a hold still clicks, which would shade
 		// the strip; capture wins for child targets, and registering
 		// before the shade listener wins when the header is the target
@@ -1234,9 +1182,9 @@ const createPanelManager = () => {
 				toggleShade(key);
 			}
 		});
-		// right-click or shift F10 opens the docking menu, but only where
-		// ours will actually open: text fields and text-bearing regions
-		// keep the native menu, and a module with no menu verbs (floatOnly
+		// the docking menu claims a right-click only where it will
+		// actually open: text fields and text-bearing regions keep the
+		// native menu, and a module with no menu verbs (floatOnly
 		// while wide, off the stack while narrow) must not eat the
 		// right-click and offer nothing in its place. The menu key's
 		// synthesized contextmenu is cancelled on keydown so it cannot
@@ -1275,14 +1223,6 @@ const createPanelManager = () => {
 		});
 	};
 
-	const setVisible = (key, fn) => {
-		const reg = registry.get(key);
-		if (reg && typeof fn === 'function') {
-			reg.visible = fn;
-		}
-	};
-
-	// ---- focus: any press in a floating module lifts it ----
 	container.addEventListener(
 		'pointerdown',
 		e => {
@@ -1298,13 +1238,11 @@ const createPanelManager = () => {
 		e.target.classList?.remove('flash');
 	});
 
-	// ---- sidebar grip ----
 	grip?.addEventListener('click', () => {
 		collapsed = !collapsed;
 		layout();
 	});
 
-	// ---- phone drawer: the top strip's title drops the sidebar open ----
 	const drawerButton = $('drawerButton');
 	const setDrawer = openState => {
 		sidebar.classList.toggle('open', openState);
@@ -1313,7 +1251,7 @@ const createPanelManager = () => {
 	drawerButton?.addEventListener('click', () => {
 		setDrawer(!sidebar.classList.contains('open'));
 	});
-	/** Escape's drawer stop: close an open drawer and report it */
+	/** Escape's drawer stop: true ends toolbar.js's Escape chain */
 	const closeDrawer = () => {
 		if (!sidebar.classList.contains('open')) {
 			return false;
@@ -1340,7 +1278,6 @@ const createPanelManager = () => {
 		layout();
 	});
 
-	// ---- drag: any dock <-> floating, reorder inside a dock ----
 	let drag = null;
 	let placeholder = null;
 	let placeholderKind = null;
@@ -1386,7 +1323,6 @@ const createPanelManager = () => {
 		return skipPlaceholders(placeholder.nextElementSibling) === before;
 	};
 
-	// side and stack slots animate height; column slots animate width
 	const placeSlot = (parent, before, kind, size) => {
 		if (placeholderMatches(parent, before, kind)) {
 			return;
@@ -1435,8 +1371,6 @@ const createPanelManager = () => {
 		if (!cv || e.clientX < cv.left || e.clientX > cv.right) {
 			return null;
 		}
-		// leaving a bar takes a real pull from where it was grabbed;
-		// smaller movements keep the panel in its dock
 		const pull = Math.max(PULL_MIN_PX, (drag.ghostH || 80) / 3);
 		if (drag.fromDock === 'top') {
 			return e.clientY - drag.startY < pull
@@ -1730,11 +1664,10 @@ const createPanelManager = () => {
 	});
 
 	/**
-	 * Abort a drag WITHOUT committing: a layout() mid-drag (breakpoint
-	 * flip, resize debounce) rebuilds the DOM the drag references, so
-	 * endDrag would read stale placeholder siblings and commit a wrong
-	 * dock. Strip the visuals, drop the placeholder, and let layout()
-	 * restore the saved placement.
+	 * Never commits: a layout() mid-drag (breakpoint flip, resize
+	 * debounce) rebuilds the DOM the drag references, so endDrag would
+	 * read stale placeholder siblings and commit a wrong dock. layout()
+	 * restores the saved placement instead.
 	 */
 	const cancelDrag = () => {
 		if (!drag) {
@@ -1893,18 +1826,16 @@ const createPanelManager = () => {
 		if (reg.el.classList.contains('fl')) {
 			applyFloatPosition(key, reg.el);
 		}
-		// the character map's corner grip lands here: a deliberate size
-		// gesture like any other, so a pinned tool keeps the new width
+		// a deliberate size gesture like any other, so a pinned tool
+		// keeps the new width
 		retrainPin(key);
 		save();
 	};
 
 	return {
 		register,
-		setVisible,
 		layout,
 		focus,
-		flash,
 		reopen,
 		close,
 		reset,
@@ -1914,9 +1845,7 @@ const createPanelManager = () => {
 		togglePin,
 		isPinned,
 		setFloatWidth,
-		isDocked: key => MOD[key]?.dk === 'side',
 		isCollapsed: () => collapsed,
-		isNarrow,
 		closeDrawer,
 	};
 };

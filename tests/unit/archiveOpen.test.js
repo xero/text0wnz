@@ -1,9 +1,3 @@
-/**
- * Native archive opens: the picker modal for multi-entry zips and
- * lha collys, the straight-through single-entry path, amiga import
- * hints on lha entries only, and the error states that land in the
- * modal's own status line.
- */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createArchiveOpener, isArchiveFile } from '../../src/js/client/archiveOpen.js';
 import { buildZip } from '../corpus/zipFixture.js';
@@ -21,7 +15,7 @@ const MARKUP = `
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));
 
-// a File stand-in: jsdom's File lacks arrayBuffer in some runners
+// jsdom's File lacks arrayBuffer in some runners
 const fakeFile = (name, bytes) => ({
 	name,
 	arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),

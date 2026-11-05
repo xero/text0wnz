@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createToolPreview } from '../../src/js/client/ui.js';
 
-// Mutable font metrics so tests can simulate a zoom (scale factor) change
+// mutable so tests can simulate a zoom (scale factor) change
 const metrics = { width: 8, height: 16 };
 
 vi.mock('../../src/js/client/state.js', () => ({

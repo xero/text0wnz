@@ -1,13 +1,10 @@
 /**
- * Service worker unit coverage. The worker must answer a same-origin
- * SKIP_WAITING message with skipWaiting() (main.js posts it when the
- * user accepts the update modal). Recovery: a generation that
- * precached index.html with revision:null wedges returning browsers
- * on stale HTML, so install must detect that generation (legacy
- * runtime caches or a revisionless precached index.html), flag it,
- * and skip waiting; activate must then purge the legacy caches and
- * reload only the wedged (non-answering) clients. Workbox and the
- * worker global are stubbed; jsdom has no service worker scope.
+ * Workbox and the worker global are stubbed: jsdom has no service
+ * worker scope. A generation that precached index.html with
+ * revision:null wedges returning browsers on stale HTML, so install
+ * must detect it (legacy runtime caches or a revisionless precached
+ * index.html), flag it, and skip waiting; activate then purges the
+ * legacy caches and reloads only the wedged (non-answering) clients.
  */
 import {
 	describe,
@@ -56,6 +53,7 @@ const fakeCaches = {
 
 let onMessage;
 let onInstall;
+let onFetch;
 let activateHandlers;
 
 const runEvent = async handler => {
@@ -71,11 +69,27 @@ const runEvent = async handler => {
 beforeAll(async () => {
 	vi.stubGlobal('self', fakeSelf);
 	vi.stubGlobal('caches', fakeCaches);
-	vi.stubGlobal('Response', class {});
+	vi.stubGlobal(
+		'Response',
+		class {
+			static redirect(url, status) {
+				return { redirect: url, status };
+			}
+		},
+	);
+	vi.stubGlobal(
+		'Request',
+		class {
+			constructor(url) {
+				this.url = url;
+			}
+		},
+	);
 	await import('../../src/service.js');
 	const calls = fakeSelf.addEventListener.mock.calls;
 	onMessage = calls.find(c => c[0] === 'message')?.[1];
 	onInstall = calls.find(c => c[0] === 'install')?.[1];
+	onFetch = calls.find(c => c[0] === 'fetch')?.[1];
 	activateHandlers = calls.filter(c => c[0] === 'activate').map(c => c[1]);
 });
 
@@ -195,6 +209,53 @@ describe('wedged-generation recovery', () => {
 		await runEvent(activateHandlers[0]);
 		expect(cacheStore.has('style-cache')).toBe(false);
 		expect(fakeSelf.clients.claim).not.toHaveBeenCalled();
+	});
+});
+
+describe('share target', () => {
+	const share = async headers => {
+		const client = { postMessage: vi.fn() };
+		fakeSelf.clients.matchAll.mockResolvedValue([client]);
+		const file = { name: 'art.ans', size: 4, type: '' };
+		const formData = vi.fn(async () => ({ get: () => file }));
+		let response;
+		onFetch({
+			request: {
+				url: 'http://localhost:3000/open',
+				method: 'POST',
+				headers: { get: name => headers[name] ?? null },
+				formData,
+			},
+			respondWith: promise => {
+				response = promise;
+			},
+		});
+		return { response: await response, formData, client };
+	};
+
+	it('opens a POST that carries the app origin', async () => {
+		const { response, client } = await share({ origin: 'http://localhost:3000' });
+		expect(response).toEqual({ redirect: '/?source=share', status: 303 });
+		expect(cacheStore.get('text0wnz-shared-files')).toHaveLength(1);
+		expect(client.postMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ type: 'SHARED_FILE_READY' }),
+		);
+	});
+
+	// "null" is what an initiator-less share sheet sends, and also what a
+	// hostile form sends under no-referrer or a sandboxed frame
+	it.each([
+		['absent', {}],
+		['cross-site', { origin: 'https://evil.example' }],
+		['same-site', { origin: 'http://localhost:8080' }],
+		['opaque', { origin: 'null' }],
+		['absent beside a Sec-Fetch-Site', { 'sec-fetch-site': 'same-origin' }],
+	])('turns away a POST whose origin is %s', async (_, headers) => {
+		const { response, formData, client } = await share(headers);
+		expect(response).toEqual({ redirect: '/', status: 303 });
+		expect(formData).not.toHaveBeenCalled();
+		expect(cacheStore.has('text0wnz-shared-files')).toBe(false);
+		expect(client.postMessage).not.toHaveBeenCalled();
 	});
 });
 

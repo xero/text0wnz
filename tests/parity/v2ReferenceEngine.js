@@ -1,17 +1,13 @@
 /**
- * FROZEN v2 reference engine for the P2 scripted-stroke identity gate.
- *
- * This is the doc-mutation subset of v2 canvas.js (pre-engine-swap),
- * extracted VERBATIM minus rendering, collab, and font concerns: the
- * u16 imageData buffer, draw entry points, half-block painting, mirror
- * tables, the bright-bg optimize pass, chunked undo/redo, areas, and
- * network quickDraw. It exists so the v3 editor core is forever pinned
- * against real v2 behavior even after canvas.js itself runs on v3.
- * engineParity.test.js proved the triangle (live v2 === this reference
- * === v3 core) in the same tree before the swap landed.
+ * FROZEN v2 reference engine for the scripted-stroke identity gate
+ * (engineParity.test.js): the doc-mutation subset of v2 canvas.js,
+ * extracted VERBATIM minus rendering, collab, and font concerns, so the
+ * v3 editor core stays pinned against real v2 behavior even after
+ * canvas.js itself runs on v3.
  *
  * DO NOT "improve" this file; it preserves v2 quirks on purpose,
  * including the swapped half-block constant names from magicNumbers.
+ * Only the marked post-v2 deltas change, in lockstep with the v3 core.
  */
 
 // v2 magicNumbers subset (names preserved, swapped meaning and all)
@@ -318,10 +314,10 @@ export const createV2ReferenceEngine = (initialColumns, initialRows) => {
 			const attribute = imageData[index];
 			const background = (attribute >> 4) & 15;
 			let foreground;
-			// post-v2, deliberate: moebiusXBIN's black-foreground
-			// normalization, adopted across every engine (2026-10 audit).
-			// Black ink is indistinguishable from background, so those
-			// cells canonicalize to the form the ancestor writes.
+			// post-v2, deliberate: the black-foreground normalization from
+			// moebiusXBIN doc.js, TextModeDoc.optimize_block(), shared by
+			// every engine. Black ink is indistinguishable from background,
+			// so those cells canonicalize to the form the ancestor writes.
 			if ((attribute & 15) === 0) {
 				if (background === 0 || attribute >> 8 === FULL_BLOCK) {
 					draw(index, CHAR_SPACE, 7, 0, block[1], block[2]);

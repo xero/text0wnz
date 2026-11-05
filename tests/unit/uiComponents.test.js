@@ -7,6 +7,7 @@ import {
 	createDragDropController,
 	createGrid,
 	createToolPreview,
+	createSegmentedControl,
 } from '../../src/js/client/ui.js';
 
 vi.mock('../../src/js/client/state.js', () => ({
@@ -34,7 +35,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 }));
 
 describe('UI Components', () => {
-	// Helper to create events that work in both Node and browser environments
+	// works in both Node and browser environments
 	const createEvent = (type, props = {}) => {
 		const event = document.createEvent('Event');
 		event.initEvent(type, true, true);
@@ -185,7 +186,6 @@ describe('UI Components', () => {
 
 			createPaintShortcuts(keyPair);
 
-			// Clear the mock to ensure we track only this call
 			State.palette.setForegroundColor.mockClear();
 
 			const keyEvent = new KeyboardEvent('keydown', {
@@ -249,8 +249,8 @@ describe('UI Components', () => {
 		});
 	});
 
-	// Note: createGrid and createToolPreview rendering output is covered by
-	// E2E tests; the unit tests below only assert their lazy allocation.
+	// E2E covers createGrid and createToolPreview rendering output; these
+	// only pin lazy allocation
 
 	describe('createGrid', () => {
 		it('should defer grid canvas creation until toggled on', () => {
@@ -308,6 +308,37 @@ describe('UI Components', () => {
 			document.dispatchEvent(event);
 
 			expect(lbl.innerText).toContain('x');
+		});
+	});
+
+	describe('createSegmentedControl', () => {
+		// a cmd, ctrl, or alt arrow belongs to the canvas or the browser,
+		// even on a segment the keyboard reached
+		it('steps on a bare arrow and leaves a modified one alone', () => {
+			const onChange = vi.fn();
+			const control = createSegmentedControl(
+				'modeTest',
+				[{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }],
+				onChange,
+			);
+			const group = control.getElement();
+			const press = mods => {
+				const e = new KeyboardEvent('keydown', {
+					key: 'ArrowRight',
+					bubbles: true,
+					cancelable: true,
+					...mods,
+				});
+				group.firstChild.dispatchEvent(e);
+				return e.defaultPrevented;
+			};
+			for (const mods of [{ metaKey: true }, { ctrlKey: true }, { altKey: true }]) {
+				expect(press(mods)).toBe(false);
+			}
+			expect(onChange).not.toHaveBeenCalled();
+			expect(control.value()).toBe('a');
+			expect(press({})).toBe(true);
+			expect(control.value()).toBe('b');
 		});
 	});
 

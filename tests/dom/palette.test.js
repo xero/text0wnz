@@ -46,12 +46,12 @@ describe('Palette DOM Tests', () => {
 
 		it('should have correct default foreground color', () => {
 			const foregroundColor = palette.getForegroundColor();
-			expect(foregroundColor).toBe(7); // Default white color
+			expect(foregroundColor).toBe(7); // Light Gray
 		});
 
 		it('should have correct default background color', () => {
 			const backgroundColor = palette.getBackgroundColor();
-			expect(backgroundColor).toBe(0); // Default black color
+			expect(backgroundColor).toBe(0); // Black
 		});
 
 		it('should render color preview elements', () => {
@@ -204,7 +204,6 @@ describe('Palette DOM Tests', () => {
 			expect(palette.getForegroundColor()).toBe(12);
 			expect(palette.getBackgroundColor()).toBe(4);
 
-			// State should persist
 			expect(palette.getForegroundColor()).toBe(12);
 			expect(palette.getBackgroundColor()).toBe(4);
 		});
@@ -305,7 +304,7 @@ describe('Palette DOM Tests', () => {
 
 	describe('Color Values', () => {
 		it('should return RGBA color values', () => {
-			const rgba = palette.getRGBAColor(7); // White
+			const rgba = palette.getRGBAColor(7); // Light Gray
 			expect(rgba).toHaveLength(4);
 			expect(rgba[0]).toBeGreaterThanOrEqual(0);
 			expect(rgba[0]).toBeLessThanOrEqual(255);

@@ -1,7 +1,6 @@
 /**
- * Zoom controller: one setZoom with focal anchoring behind pinch,
- * ctrl/cmd+wheel, slider, and keyboard steps. GL zooms continuously at
- * rAF cadence; the chunk renderer commits once at gesture end.
+ * GL zooms continuously at rAF cadence; the chunk renderer commits
+ * once at gesture end.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -93,8 +92,6 @@ describe('zoom controller', () => {
 		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1.5);
 		mocks.setScale(1.37);
 		zoom.zoomOut();
-		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1);
-		zoom.zoomReset();
 		expect(mocks.state.font.setScaleFactor).toHaveBeenLastCalledWith(1);
 	});
 

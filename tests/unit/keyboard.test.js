@@ -8,9 +8,14 @@ import {
 } from '../../src/js/client/keyboard.js';
 import { createFKeys } from '../../src/js/client/fkeys.js';
 import State from '../../src/js/client/state.js';
+import Toolbar from '../../src/js/client/toolbar.js';
+import { cp437ToUnicode } from '../../src/js/core/cp437.js';
+import { tokenizePasteText } from '../../src/js/core/paste.js';
 
-vi.mock('../../src/js/client/state.js', () => ({
-	default: {
+// every test gets fresh State mocks: tests rewire them in place, so a
+// shared object leaks one test's canvas size or draw hook into the next
+const { stockState } = vi.hoisted(() => ({
+	stockState: () => ({
 		font: {
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
@@ -77,8 +82,10 @@ vi.mock('../../src/js/client/state.js', () => ({
 			clear: vi.fn(),
 			drawHalfBlock: vi.fn(),
 		},
-	},
+	}),
 }));
+
+vi.mock('../../src/js/client/state.js', () => ({ default: stockState() }));
 
 vi.mock('../../src/js/client/toolbar.js', () => ({
 	default: {
@@ -145,17 +152,37 @@ vi.mock('../../src/js/client/ui.js', () => ({
 }));
 
 describe('Keyboard Utilities', () => {
+	let listeners;
+
 	beforeEach(() => {
 		document.body.innerHTML = '';
 		vi.clearAllMocks();
+		Object.assign(State, stockState());
 		global.requestAnimationFrame = vi.fn(cb => setTimeout(cb, 16));
 		global.cancelAnimationFrame = vi.fn(id => clearTimeout(id));
+		// the paste tool and the cursors hook the shared document for good,
+		// and a failing test never reaches its disable(): drop every
+		// listener a test adds before the next one runs
+		listeners = [];
+		const add = document.addEventListener;
+		vi.spyOn(document, 'addEventListener').mockImplementation((...args) => {
+			listeners.push(args);
+			add.apply(document, args);
+		});
 	});
 
 	afterEach(() => {
+		listeners.forEach(args => document.removeEventListener(...args));
 		document.body.innerHTML = '';
 		vi.restoreAllMocks();
 	});
+
+	// a click focuses the button between the press and the release
+	const clickFocus = element => {
+		element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+		element.focus();
+		element.dispatchEvent(new Event('pointerup', { bubbles: true }));
+	};
 
 	describe('Module Exports', () => {
 		it('should export all expected keyboard functions', () => {
@@ -189,6 +216,7 @@ describe('Keyboard Utilities', () => {
 			const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 			const controller = createFKeys();
 			controller.enable();
+			controller.disable();
 
 			expect(addEventListenerSpy).toHaveBeenCalledWith(
 				'keydown',
@@ -207,8 +235,43 @@ describe('Keyboard Utilities', () => {
 			);
 		});
 
-		it('should initialize with predefined character sets', () => {
-			expect(() => createFKeys()).not.toThrow();
+		it('pages all 256 CP437 codes onto 12 key classic sets', () => {
+			const classic = createFKeys()
+				.getSets()
+				.filter(page => page.label.startsWith('CP437'));
+			expect(classic.every(page => page.chars.length === 12)).toBe(true);
+			expect(new Set(classic.flatMap(page => page.chars)).size).toBe(256);
+			expect(classic[0].chars.slice(0, 4)).toEqual([218, 191, 192, 217]);
+		});
+
+		it('F1-F12 type from the shades and blocks page, never with Ctrl', () => {
+			const insert = vi.fn();
+			const controller = createFKeys(insert, () => false);
+			controller.enable();
+			['F1', 'F4', 'F12'].forEach(code =>
+				document.dispatchEvent(new KeyboardEvent('keydown', { code })));
+			document.dispatchEvent(
+				new KeyboardEvent('keydown', { code: 'F2', ctrlKey: true }),
+			);
+			controller.disable();
+			expect(insert.mock.calls).toEqual([[176], [219], [32]]);
+		});
+
+		it('F-keys pressed in a text entry stay in the field', () => {
+			const insert = vi.fn();
+			const input = document.createElement('input');
+			document.body.appendChild(input);
+			const controller = createFKeys(insert, t => t === input);
+			controller.enable();
+			const e = new KeyboardEvent('keydown', {
+				code: 'F1',
+				bubbles: true,
+				cancelable: true,
+			});
+			input.dispatchEvent(e);
+			controller.disable();
+			expect(e.defaultPrevented).toBe(false);
+			expect(insert).not.toHaveBeenCalled();
 		});
 
 		it('should add palette and font change listeners', () => {
@@ -263,6 +326,19 @@ describe('Keyboard Utilities', () => {
 			expect(cursor.getY()).toBe(0);
 		});
 
+		it('move clamps to the canvas and sets the caret a pixel up-left of the cell', () => {
+			const container = document.createElement('div');
+			const cursor = createCursor(container);
+			const caret = container.firstChild;
+
+			cursor.move(-5, -5);
+			expect([cursor.getX(), cursor.getY()]).toEqual([0, 0]);
+			cursor.move(100, 100);
+			expect([cursor.getX(), cursor.getY()]).toEqual([79, 24]);
+			cursor.move(10, 5);
+			expect([caret.style.left, caret.style.top]).toEqual(['79px', '79px']);
+		});
+
 		it('re-homes to the origin when a new document loads', () => {
 			const container = document.createElement('div');
 			const cursor = createCursor(container);
@@ -314,6 +390,23 @@ describe('Keyboard Utilities', () => {
 			const selectionCursor = createSelectionCursor(container);
 
 			expect(typeof selectionCursor.isVisible).toBe('function');
+		});
+
+		it('reads a reversed drag back as a top-left rect clipped to the canvas', () => {
+			const container = document.createElement('div');
+			const selectionCursor = createSelectionCursor(container);
+
+			selectionCursor.setStart(10, 8);
+			selectionCursor.setEnd(5, 3);
+			expect(selectionCursor.getSelection()).toEqual({
+				x: 5,
+				y: 3,
+				width: 6,
+				height: 6,
+			});
+			selectionCursor.setStart(78, 0);
+			selectionCursor.setEnd(85, 0);
+			expect(selectionCursor.getSelection().width).toBe(2);
 		});
 
 		it('remembers the last selection across a hide', () => {
@@ -370,6 +463,32 @@ describe('Keyboard Utilities', () => {
 	});
 
 	describe('createKeyboardController', () => {
+		// the browser rule the handlers share the document under: an
+		// uncancelled keydown is followed by a keypress only for a key
+		// that yields a character or Enter, and never with ctrl or alt
+		const press = (target, init) => {
+			const opts = { cancelable: true, bubbles: true, ...init };
+			const down = new KeyboardEvent('keydown', opts);
+			target.dispatchEvent(down);
+			const charKey = [...init.key].length === 1 || init.key === 'Enter';
+			if (down.defaultPrevented || !charKey || init.ctrlKey || init.altKey) {
+				return { down, keypress: null };
+			}
+			const keypress = new KeyboardEvent('keypress', opts);
+			target.dispatchEvent(keypress);
+			return { down, keypress };
+		};
+
+		// the real cursor, so its own keydown handler shares the document
+		// with the controller's the way it does in the app
+		const liveCursor = (x, y) => {
+			State.cursor = createCursor(document.createElement('div'));
+			State.cursor.move(x, y);
+			return State.cursor;
+		};
+
+		const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
 		it('should create keyboard controller with required methods', () => {
 			const controller = createKeyboardController();
 
@@ -385,27 +504,13 @@ describe('Keyboard Utilities', () => {
 			expect(controller).toHaveProperty('eraseColumn');
 		});
 
-		describe('fixed-canvas row and column shifts', () => {
+		describe('fixed-canvas row and column edits', () => {
 			// a 3x3 virtual grid: pristine cells read a per-coord code so
 			// shift mappings are provable; writes land back in the grid
 			// the way drawBlocks applies them (immediately)
 			const codeAt = (x, y) => 100 + y * 10 + x;
 			let grid;
 
-			afterEach(() => {
-				// the module-level State mock outlives this describe:
-				// hand later tests back the stock implementations
-				State.textArtCanvas.getColumns.mockReturnValue(80);
-				State.textArtCanvas.getRows.mockReturnValue(25);
-				State.textArtCanvas.getBlock.mockReturnValue({
-					charCode: 32,
-					foregroundColor: 7,
-					backgroundColor: 0,
-				});
-				State.textArtCanvas.draw.mockImplementation(() => {});
-				State.cursor.getX.mockReturnValue(0);
-				State.cursor.getY.mockReturnValue(0);
-			});
 			const wireGrid = (cursorX, cursorY) => {
 				grid = new Map();
 				const cellAt = (x, y) =>
@@ -466,6 +571,28 @@ describe('Keyboard Utilities', () => {
 				expect(cellAt(2, 1).charCode).toBe(32); // last col blanks
 			});
 
+			it('the erase ops blank from the cursor to each edge', () => {
+				const ops = {
+					eraseRow: ['0,1', '1,1', '2,1'],
+					eraseToStartOfRow: ['0,1', '1,1'],
+					eraseToEndOfRow: ['1,1', '2,1'],
+					eraseColumn: ['1,0', '1,1', '1,2'],
+					eraseToStartOfColumn: ['1,0', '1,1'],
+					eraseToEndOfColumn: ['1,1', '1,2'],
+				};
+				for (const [op, cells] of Object.entries(ops)) {
+					wireGrid(1, 1);
+					createKeyboardController()[op]();
+					expect([...grid.keys()].sort(), op).toEqual(cells);
+					grid.forEach(cell =>
+						expect(cell).toEqual({
+							charCode: 32,
+							foregroundColor: 7,
+							backgroundColor: 0,
+						}));
+				}
+			});
+
 			it('suspends mirror mode around the shift and restores it', () => {
 				wireGrid(0, 0);
 				State.textArtCanvas.getMirrorMode.mockReturnValue(true);
@@ -478,8 +605,6 @@ describe('Keyboard Utilities', () => {
 		it('should enable keyboard controller', () => {
 			const controller = createKeyboardController();
 			expect(() => controller.enable()).not.toThrow();
-			// detach the document listener so later tests see only their own
-			controller.disable();
 		});
 
 		it('should disable keyboard controller', () => {
@@ -489,7 +614,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('switching away without a live selection leaves the cursor alone', () => {
-			vi.clearAllMocks();
 			State.selectionCursor.isVisible = vi.fn(() => false);
 			const controller = createKeyboardController();
 			controller.enable();
@@ -498,7 +622,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('parks the cursor at a live selection without scrolling', () => {
-			vi.clearAllMocks();
 			State.selectionCursor.isVisible = vi.fn(() => true);
 			State.selectionCursor.getPos = vi.fn(() => ({ x: 7, y: 9 }));
 			const controller = createKeyboardController();
@@ -508,7 +631,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('draws CP437 21 exactly once per § keypress', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback((code, fg, bg, x, y) => drawn.push({ code, x, y })));
@@ -516,14 +638,13 @@ describe('Keyboard Utilities', () => {
 			controller.enable();
 			document.dispatchEvent(new KeyboardEvent('keypress', { key: '§' }));
 			controller.disable();
-			// typed input rides the queue now: flush the microtask hop
+			// typed input rides the queue: flush the microtask hop
 			await new Promise(resolve => setTimeout(resolve, 0));
 			expect(drawn).toEqual([{ code: 21, x: 0, y: 0 }]);
 			expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
 		});
 
 		it('interns typed non-CP437 glyphs instead of aliasing ids', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -539,13 +660,234 @@ describe('Keyboard Utilities', () => {
 			expect(State.textArtCanvas.resolveUnicode).toHaveBeenCalledWith(
 				new Set([0x2603]),
 			);
-			// the raw codepoint as a glyph id aliased interned glyphs and
-			// quantized to '?' everywhere downstream
+			// a raw codepoint as the glyph id aliases interned glyphs and
+			// quantizes to '?' everywhere downstream
 			expect(drawn).toEqual([300]);
 		});
 
+		it('every CP437 glyph types as its byte', async () => {
+			const drawn = [];
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback(code => drawn.push(code)));
+			State.textArtCanvas.resolveUnicode = vi.fn(async () => new Map());
+			const bytes = Array.from({ length: 255 }, (_, i) => i + 1);
+			const controller = createKeyboardController();
+			controller.enable();
+			for (const byte of bytes) {
+				document.dispatchEvent(
+					new KeyboardEvent('keypress', { key: String.fromCodePoint(cp437ToUnicode(byte)) }),
+				);
+			}
+			await settle();
+			controller.disable();
+			expect(drawn).toEqual(bytes);
+			expect(State.textArtCanvas.resolveUnicode).not.toHaveBeenCalled();
+		});
+
+		it.each(['☺', '¶', '•', '←', '♥', '░', 'é', '☃'])(
+			'typed %s lands what a paste of it lands',
+			async ch => {
+				const drawn = [];
+				State.textArtCanvas.draw = vi.fn(callback =>
+					callback(code => drawn.push(code)));
+				State.textArtCanvas.resolveUnicode = vi.fn(
+					async codepoints => new Map([...codepoints].map(cp => [cp, ~cp])),
+				);
+				const controller = createKeyboardController();
+				controller.enable();
+				document.dispatchEvent(new KeyboardEvent('keypress', { key: ch }));
+				await settle();
+				controller.disable();
+				expect(drawn).toEqual(tokenizePasteText(ch).tokens);
+			},
+		);
+
+		describe('keys pressed in a text entry stay in the field', () => {
+			it.each([
+				['a digit', { key: '5', code: 'Digit5' }],
+				['Backspace', { key: 'Backspace', code: 'Backspace' }],
+				['Enter', { key: 'Enter', code: 'Enter' }],
+				['Space', { key: ' ', code: 'Space' }],
+				['Tab', { key: 'Tab', code: 'Tab' }],
+				['ArrowUp', { key: 'ArrowUp', code: 'ArrowUp' }],
+				['Home', { key: 'Home', code: 'Home' }],
+				['shift ArrowLeft', { key: 'ArrowLeft', code: 'ArrowLeft', shiftKey: true }],
+				['F1', { key: 'F1', code: 'F1' }],
+			])('%s', async (_, init) => {
+				const cursor = liveCursor(2, 3);
+				const field = document.createElement('input');
+				field.type = 'number';
+				document.body.appendChild(field);
+				field.focus();
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down, keypress } = press(field, init);
+				await settle();
+				controller.disable();
+				expect(down.defaultPrevented).toBe(false);
+				expect(keypress?.defaultPrevented ?? false).toBe(false);
+				expect(State.textArtCanvas.draw).not.toHaveBeenCalled();
+				expect(Toolbar.switchTool).not.toHaveBeenCalled();
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			});
+		});
+
+		describe('Space and the arrows on a focused control', () => {
+			let drawn;
+			let button;
+			let seen;
+			beforeEach(() => {
+				drawn = [];
+				State.textArtCanvas.draw = vi.fn(callback =>
+					callback(code => drawn.push(code)));
+				button = document.createElement('button');
+				document.body.appendChild(button);
+				// what the control's own handler sees, before the document's
+				seen = [];
+				button.addEventListener('keydown', e =>
+					seen.push(e.defaultPrevented));
+			});
+
+			it('Space on a control the keyboard reached is left to it', async () => {
+				const cursor = liveCursor(2, 3);
+				button.focus();
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down, keypress } = press(button, { key: ' ', code: 'Space' });
+				await settle();
+				controller.disable();
+				// an uncancelled keydown is what lets the browser press the
+				// button on keyup
+				expect(down.defaultPrevented).toBe(false);
+				expect(keypress?.defaultPrevented).toBe(false);
+				expect(drawn).toEqual([]);
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			});
+
+			it('Space on a control a pointer press focused types a space and cannot press it', async () => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				clickFocus(button);
+				const { down } = press(button, { key: ' ', code: 'Space' });
+				await settle();
+				controller.disable();
+				expect(down.defaultPrevented).toBe(true);
+				expect(drawn).toEqual([32]);
+				expect([cursor.getX(), cursor.getY()]).toEqual([3, 3]);
+			});
+
+			it.each([
+				['ArrowRight', {}],
+				['ArrowLeft', { shiftKey: true }],
+			])('%s on a control the keyboard reached is left to it', async (code, mods) => {
+				const cursor = liveCursor(2, 3);
+				button.focus();
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down } = press(button, { key: code, code, ...mods });
+				await settle();
+				controller.disable();
+				expect(seen).toEqual([false]);
+				expect(down.defaultPrevented).toBe(false);
+				expect(Toolbar.switchTool).not.toHaveBeenCalled();
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			});
+
+			it('an arrow on a control a pointer press focused reaches it cancelled and moves the cursor', async () => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				clickFocus(button);
+				press(button, { key: 'ArrowRight', code: 'ArrowRight' });
+				await settle();
+				controller.disable();
+				expect(seen).toEqual([true]);
+				expect([cursor.getX(), cursor.getY()]).toEqual([3, 3]);
+			});
+
+			it('cmd arrows stay canvas input on a control the keyboard reached', async () => {
+				const cursor = liveCursor(2, 3);
+				button.focus();
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down } = press(button, {
+					key: 'ArrowRight',
+					code: 'ArrowRight',
+					metaKey: true,
+				});
+				await settle();
+				controller.disable();
+				expect(down.defaultPrevented).toBe(true);
+				expect([cursor.getX(), cursor.getY()]).toEqual([79, 3]);
+			});
+
+			describe('a range slider is a control, not a text field', () => {
+				let slider;
+				beforeEach(() => {
+					slider = document.createElement('input');
+					slider.type = 'range';
+					document.body.appendChild(slider);
+					seen = [];
+					slider.addEventListener('keydown', e =>
+						seen.push(e.defaultPrevented));
+				});
+
+				it('a clicked one leaves letters and arrows to the canvas', async () => {
+					const cursor = liveCursor(2, 3);
+					const controller = createKeyboardController();
+					controller.enable();
+					clickFocus(slider);
+					const { keypress } = press(slider, { key: 'a', code: 'KeyA' });
+					press(slider, { key: 'ArrowDown', code: 'ArrowDown' });
+					await settle();
+					controller.disable();
+					expect(keypress?.defaultPrevented).toBe(true);
+					expect(drawn).toEqual([97]);
+					// cancelled before the slider's own default steps it
+					expect(seen).toEqual([false, true]);
+					expect([cursor.getX(), cursor.getY()]).toEqual([3, 4]);
+				});
+
+				it('one the keyboard reached keeps its arrows', async () => {
+					const cursor = liveCursor(2, 3);
+					slider.focus();
+					const controller = createKeyboardController();
+					controller.enable();
+					const { down } = press(slider, {
+						key: 'ArrowRight',
+						code: 'ArrowRight',
+					});
+					await settle();
+					controller.disable();
+					expect(down.defaultPrevented).toBe(false);
+					expect(seen).toEqual([false]);
+					expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+				});
+
+				it.each([
+					['a slider', () => slider],
+					['a button', () => button],
+				])('Home, End, PageUp, and PageDown on %s the keyboard reached', async (name, control) => {
+					const cursor = liveCursor(40, 12);
+					control().focus();
+					const controller = createKeyboardController();
+					controller.enable();
+					const kept = ['Home', 'End', 'PageUp', 'PageDown'].map(
+						code => !press(control(), { key: code, code }).down.defaultPrevented,
+					);
+					await settle();
+					controller.disable();
+					// only a slider jumps on them; any other control leaves them
+					// to the canvas cursor
+					const slid = name === 'a slider';
+					expect(kept).toEqual(Array(4).fill(slid));
+					expect([cursor.getX(), cursor.getY()]).toEqual(slid ? [40, 12] : [79, 12]);
+				});
+			});
+		});
+
 		it('picks up colors on Ctrl+U through keydown', () => {
-			vi.clearAllMocks();
 			State.textArtCanvas.getBlock = vi.fn(() => ({
 				charCode: 65,
 				foregroundColor: 12,
@@ -553,8 +895,7 @@ describe('Keyboard Utilities', () => {
 			}));
 			const controller = createKeyboardController();
 			controller.enable();
-			// keypress never fires for ctrl combos in modern browsers, so
-			// the old keypress branch was dead
+			// keypress never fires for ctrl combos in modern browsers
 			document.dispatchEvent(
 				new KeyboardEvent('keydown', { code: 'KeyU', ctrlKey: true }),
 			);
@@ -564,7 +905,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('Tab draws the tab glyph while the canvas scope holds focus', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -583,7 +923,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('Tab types from inside the canvas container too', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -608,7 +947,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('Tab from a focused control walks instead of typing', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -630,44 +968,153 @@ describe('Keyboard Utilities', () => {
 			expect(e.defaultPrevented).toBe(false);
 		});
 
-		it('Enter on a focused control activates it instead of newlining', async () => {
-			vi.clearAllMocks();
-			const button = document.createElement('button');
-			document.body.appendChild(button);
-			button.focus();
+		it.each(['Enter', 'NumpadEnter'])(
+			'%s on a focused control activates it instead of newlining',
+			async code => {
+				const cursor = liveCursor(2, 3);
+				const button = document.createElement('button');
+				document.body.appendChild(button);
+				button.focus();
+				const controller = createKeyboardController();
+				controller.enable();
+				const { keypress } = press(button, { key: 'Enter', code });
+				await settle();
+				controller.disable();
+				// an uncancelled keypress is what the browser turns into
+				// the button's click
+				expect(keypress?.defaultPrevented).toBe(false);
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			},
+		);
+
+		it.each(['Enter', 'NumpadEnter'])(
+			'%s on a control a pointer press focused newlines',
+			async code => {
+				const cursor = liveCursor(2, 3);
+				const button = document.createElement('button');
+				document.body.appendChild(button);
+				const controller = createKeyboardController();
+				controller.enable();
+				clickFocus(button);
+				const { down } = press(button, { key: 'Enter', code });
+				await settle();
+				controller.disable();
+				button.remove();
+				expect(down.defaultPrevented).toBe(true);
+				expect([cursor.getX(), cursor.getY()]).toEqual([0, 4]);
+			},
+		);
+
+		it('Enter activates a control the keyboard reaches after a click elsewhere', async () => {
+			const cursor = liveCursor(2, 3);
+			const clicked = document.createElement('button');
+			const tabbed = document.createElement('button');
+			document.body.append(clicked, tabbed);
 			const controller = createKeyboardController();
 			controller.enable();
-			const e = new KeyboardEvent('keypress', {
-				key: 'Enter',
-				cancelable: true,
-				bubbles: true,
-			});
-			button.dispatchEvent(e);
+			clickFocus(clicked);
+			tabbed.focus();
+			const { keypress } = press(tabbed, { key: 'Enter', code: 'Enter' });
+			await settle();
 			controller.disable();
-			button.remove();
-			await new Promise(resolve => setTimeout(resolve, 0));
-			// the default survives so the browser clicks the button
-			expect(e.defaultPrevented).toBe(false);
-			expect(State.cursor.newLine).not.toHaveBeenCalled();
+			clicked.remove();
+			tabbed.remove();
+			expect(keypress?.defaultPrevented).toBe(false);
+			expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
 		});
 
-		it('Enter still newlines while the canvas scope holds focus', async () => {
-			vi.clearAllMocks();
+		it.each(['Enter', 'NumpadEnter'])(
+			'%s newlines while the canvas scope holds focus',
+			async code => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down } = press(document.body, { key: 'Enter', code });
+				await settle();
+				controller.disable();
+				expect(down.defaultPrevented).toBe(true);
+				expect([cursor.getX(), cursor.getY()]).toEqual([0, 4]);
+			},
+		);
+
+		// the container is a tab stop, so it matches the activation
+		// selector; only the canvas scope check keeps Enter a newline
+		it('Enter newlines from the focused canvas container', async () => {
+			const cursor = liveCursor(2, 3);
+			const cc = document.createElement('div');
+			cc.id = 'canvasContainer';
+			cc.tabIndex = 0;
+			document.body.appendChild(cc);
+			cc.focus();
 			const controller = createKeyboardController();
 			controller.enable();
-			const e = new KeyboardEvent('keypress', {
-				key: 'Enter',
-				cancelable: true,
-			});
-			document.dispatchEvent(e);
+			const { down } = press(cc, { key: 'Enter', code: 'Enter' });
+			await settle();
 			controller.disable();
-			await new Promise(resolve => setTimeout(resolve, 0));
-			expect(e.defaultPrevented).toBe(true);
-			expect(State.cursor.newLine).toHaveBeenCalledTimes(1);
+			expect(down.defaultPrevented).toBe(true);
+			expect([cursor.getX(), cursor.getY()]).toEqual([0, 4]);
+		});
+
+		it('Shift+Enter newlines too', async () => {
+			const cursor = liveCursor(2, 3);
+			const controller = createKeyboardController();
+			controller.enable();
+			press(document.body, { key: 'Enter', code: 'Enter', shiftKey: true });
+			await settle();
+			controller.disable();
+			expect([cursor.getX(), cursor.getY()]).toEqual([0, 4]);
+		});
+
+		it.each(['ctrlKey', 'altKey', 'metaKey'])(
+			'Enter with %s leaves the cursor and the default alone',
+			async modifier => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down } = press(document.body, {
+					key: 'Enter',
+					code: 'Enter',
+					[modifier]: true,
+				});
+				await settle();
+				controller.disable();
+				expect(down.defaultPrevented).toBe(false);
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			},
+		);
+
+		it('Enter and Backspace keep their defaults while a dialog holds the keyboard', async () => {
+			const cursor = liveCursor(2, 3);
+			const controller = createKeyboardController();
+			controller.enable();
+			controller.ignore();
+			const enter = press(document.body, { key: 'Enter', code: 'Enter' });
+			const back = press(document.body, { key: 'Backspace', code: 'Backspace' });
+			await settle();
+			controller.disable();
+			expect(enter.down.defaultPrevented).toBe(false);
+			expect(enter.keypress?.defaultPrevented).toBe(false);
+			expect(back.down.defaultPrevented).toBe(false);
+			expect(State.textArtCanvas.draw).not.toHaveBeenCalled();
+			expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+		});
+
+		it('Backspace at the start of a row erases nothing', async () => {
+			const cursor = liveCursor(0, 3);
+			const controller = createKeyboardController();
+			controller.enable();
+			const { down } = press(document.body, {
+				key: 'Backspace',
+				code: 'Backspace',
+			});
+			await settle();
+			controller.disable();
+			expect(down.defaultPrevented).toBe(true);
+			expect(State.textArtCanvas.draw).not.toHaveBeenCalled();
+			expect([cursor.getX(), cursor.getY()]).toEqual([0, 3]);
 		});
 
 		it('shift Tab always walks, so the keyboard can leave the canvas', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -686,7 +1133,6 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('keeps keystroke order when ascii follows in flight unicode', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			let cx = 0;
 			State.cursor.getX = vi.fn(() => cx);
@@ -717,12 +1163,9 @@ describe('Keyboard Utilities', () => {
 				{ code: 300, x: 0 },
 				{ code: 65, x: 1 },
 			]);
-			State.cursor.getX = vi.fn(() => 0);
-			State.cursor.right = vi.fn();
 		});
 
 		it('keeps the typing queue alive after a rejected resolve', async () => {
-			vi.clearAllMocks();
 			const drawn = [];
 			State.textArtCanvas.draw = vi.fn(callback =>
 				callback(code => drawn.push(code)));
@@ -743,31 +1186,130 @@ describe('Keyboard Utilities', () => {
 			expect(errSpy).toHaveBeenCalledTimes(1);
 		});
 
-		it('queues Enter behind a pending unicode glyph', async () => {
-			vi.clearAllMocks();
-			const log = [];
-			State.cursor.newLine = vi.fn(() => log.push('nl'));
-			State.textArtCanvas.draw = vi.fn(callback =>
-				callback(code => log.push(code)));
+		describe('keys behind a pending unicode glyph', () => {
+			let drawn;
 			let release;
-			State.textArtCanvas.resolveUnicode = vi.fn(
-				() =>
-					new Promise(resolve => {
-						release = resolve;
-					}),
-			);
-			const controller = createKeyboardController();
-			controller.enable();
-			document.dispatchEvent(new KeyboardEvent('keypress', { key: '☃' }));
-			document.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
-			// the newline must wait behind the pending resolve
-			await new Promise(resolve => setTimeout(resolve, 0));
-			expect(log).toEqual([]);
-			release(new Map([[0x2603, 300]]));
-			await new Promise(resolve => setTimeout(resolve, 0));
-			controller.disable();
-			expect(log).toEqual([300, 'nl']);
-			State.cursor.newLine = vi.fn();
+
+			beforeEach(() => {
+				drawn = [];
+				State.textArtCanvas.draw = vi.fn(callback =>
+					callback((code, fg, bg, x, y) => drawn.push({ code, x, y })));
+				State.textArtCanvas.resolveUnicode = vi.fn(
+					() =>
+						new Promise(resolve => {
+							release = resolve;
+						}),
+				);
+			});
+
+			// the typing queue outlives a test: a gate a failed test left
+			// shut would stall every later queued key
+			afterEach(async () => {
+				release?.(new Map());
+				await settle();
+			});
+
+			it('Enter waits for the glyph to land', async () => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				press(document.body, { key: '❤', code: 'Digit3' });
+				press(document.body, { key: 'Enter', code: 'Enter' });
+				await settle();
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+				release(new Map([[0x2764, 300]]));
+				await settle();
+				controller.disable();
+				expect(drawn).toEqual([{ code: 300, x: 2, y: 3 }]);
+				expect([cursor.getX(), cursor.getY()]).toEqual([0, 4]);
+			});
+
+			it('Backspace erases the glyph it waited for', async () => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				press(document.body, { key: '❤', code: 'Digit3' });
+				press(document.body, { key: 'Backspace', code: 'Backspace' });
+				await settle();
+				expect(drawn).toEqual([]);
+				release(new Map([[0x2764, 300]]));
+				await settle();
+				controller.disable();
+				expect(drawn).toEqual([
+					{ code: 300, x: 2, y: 3 },
+					{ code: 0, x: 2, y: 3 },
+				]);
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			});
+
+			it.each([
+				['Tab', 9],
+				['F1', 176],
+			])('%s lands after the glyph', async (key, code) => {
+				liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				press(document.body, { key: '❤', code: 'Digit3' });
+				press(document.body, { key, code: key });
+				await settle();
+				expect(drawn).toEqual([]);
+				release(new Map([[0x2764, 300]]));
+				await settle();
+				controller.disable();
+				expect(drawn).toEqual([
+					{ code: 300, x: 2, y: 3 },
+					{ code, x: 3, y: 3 },
+				]);
+			});
+
+			it.each([
+				['ArrowDown', [3, 4]],
+				['Home', [0, 3]],
+			])('%s waits for the glyph to land', async (key, at) => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				press(document.body, { key: '❤', code: 'Digit3' });
+				press(document.body, { key, code: key });
+				await settle();
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+				release(new Map([[0x2764, 300]]));
+				await settle();
+				controller.disable();
+				expect(drawn).toEqual([{ code: 300, x: 2, y: 3 }]);
+				expect([cursor.getX(), cursor.getY()]).toEqual(at);
+			});
+
+			it('a glyph that does not resolve in 10 s lands as the substitute and the keys behind it move on', async () => {
+				vi.useFakeTimers();
+				// the wait counts visible time only
+				Object.defineProperty(document, 'hidden', {
+					configurable: true,
+					get: () => false,
+				});
+				try {
+					const cursor = liveCursor(2, 3);
+					const controller = createKeyboardController();
+					controller.enable();
+					press(document.body, { key: '❤', code: 'Digit3' });
+					press(document.body, { key: 'ArrowDown', code: 'ArrowDown' });
+					await vi.advanceTimersByTimeAsync(9999);
+					expect(drawn).toEqual([]);
+					expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+					await vi.advanceTimersByTimeAsync(1);
+					controller.disable();
+					expect(drawn).toEqual([{ code: 63, x: 2, y: 3 }]);
+					expect([cursor.getX(), cursor.getY()]).toEqual([3, 4]);
+					// a resolve past the wait draws nothing more
+					release(new Map([[0x2764, 300]]));
+					await vi.advanceTimersByTimeAsync(0);
+					expect(drawn).toEqual([{ code: 63, x: 2, y: 3 }]);
+					expect([cursor.getX(), cursor.getY()]).toEqual([3, 4]);
+				} finally {
+					delete document.hidden;
+					vi.useRealTimers();
+				}
+			});
 		});
 	});
 
@@ -861,112 +1403,365 @@ describe('Keyboard Utilities', () => {
 			expect(() => tool.enable()).not.toThrow();
 			expect(() => tool.disable()).not.toThrow();
 		});
-	});
 
-	describe('Function Key Character Sets', () => {
-		it('should handle predefined character sets', () => {
-			// Test predefined character sets from Moebius/PabloDraw
-			const predefinedSets = [
-				[218, 191, 192, 217, 196, 179, 195, 180, 193, 194, 32, 32],
-				[201, 187, 200, 188, 205, 186, 204, 185, 202, 203, 32, 32],
-				[213, 184, 212, 190, 205, 179, 198, 181, 207, 209, 32, 32],
-				[214, 183, 211, 189, 196, 186, 199, 182, 208, 210, 32, 32],
-				[197, 206, 216, 215, 232, 232, 155, 156, 153, 239, 32, 32],
-				[176, 177, 178, 219, 223, 220, 221, 222, 254, 250, 32, 32],
-			];
+		describe('Enter follows the keyboard tool rule', () => {
+			let tool;
+			let button;
+			const enter = (target, code = 'Enter') => {
+				const e = new KeyboardEvent('keydown', {
+					key: 'Enter',
+					code,
+					bubbles: true,
+					cancelable: true,
+				});
+				target.dispatchEvent(e);
+				return e;
+			};
+			beforeEach(() => {
+				button = document.createElement('button');
+				document.body.appendChild(button);
+				tool = createSelectionTool();
+				tool.enable();
+			});
+			afterEach(() => tool.disable());
 
-			expect(predefinedSets).toHaveLength(6);
-			predefinedSets.forEach(set => {
-				expect(set).toHaveLength(12);
-				set.forEach(char => {
-					expect(char).toBeGreaterThanOrEqual(0);
-					expect(char).toBeLessThanOrEqual(255);
+			it('Enter on a button the keyboard reached is left to the button', () => {
+				button.focus();
+				const e = enter(button);
+				expect(e.defaultPrevented).toBe(false);
+				expect(Toolbar.switchTool).not.toHaveBeenCalled();
+				expect(State.cursor.newLine).not.toHaveBeenCalled();
+			});
+
+			it('Enter on a button a pointer press focused returns to keyboard mode and newlines', () => {
+				clickFocus(button);
+				const e = enter(button);
+				expect(e.defaultPrevented).toBe(true);
+				expect(Toolbar.switchTool).toHaveBeenCalledWith('keyboard');
+				expect(State.cursor.newLine).toHaveBeenCalledOnce();
+			});
+
+			it('NumpadEnter returns to keyboard mode from the canvas', () => {
+				const e = enter(document.body, 'NumpadEnter');
+				expect(e.defaultPrevented).toBe(true);
+				expect(Toolbar.switchTool).toHaveBeenCalledWith('keyboard');
+				expect(State.cursor.newLine).toHaveBeenCalledOnce();
+			});
+		});
+
+		describe('the focused control rule', () => {
+			let tool;
+			let button;
+			let seen;
+			const arrow = init => {
+				const e = new KeyboardEvent('keydown', {
+					bubbles: true,
+					cancelable: true,
+					...init,
+				});
+				button.dispatchEvent(e);
+				return e;
+			};
+			beforeEach(() => {
+				State.selectionCursor = createSelectionCursor(document.createElement('div'));
+				State.selectionCursor.setStart(10, 5);
+				State.selectionCursor.setEnd(10, 5);
+				button = document.createElement('button');
+				document.body.appendChild(button);
+				seen = [];
+				button.addEventListener('keydown', e => seen.push(e.defaultPrevented));
+				tool = createSelectionTool();
+				tool.enable();
+			});
+			afterEach(() => tool.disable());
+
+			it.each([
+				['ArrowRight', {}],
+				['shift ArrowRight', { shiftKey: true }],
+			])('%s on a control the keyboard reached is left to it', (_, mods) => {
+				button.focus();
+				const e = arrow({ key: 'ArrowRight', code: 'ArrowRight', ...mods });
+				expect(e.defaultPrevented).toBe(false);
+				expect(seen).toEqual([false]);
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 10,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
+
+			it('an arrow on a control a pointer press focused reaches it cancelled and moves the rect', () => {
+				clickFocus(button);
+				arrow({ key: 'ArrowRight', code: 'ArrowRight' });
+				expect(seen).toEqual([true]);
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 11,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
+
+			it('Space on a control the keyboard reached is left to it', () => {
+				button.focus();
+				expect(arrow({ key: ' ', code: 'Space' }).defaultPrevented).toBe(false);
+			});
+
+			it('Space on a control a pointer press focused cannot press it', () => {
+				clickFocus(button);
+				expect(arrow({ key: ' ', code: 'Space' }).defaultPrevented).toBe(true);
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 10,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
+
+			it('Home and End on a slider the keyboard reached are left to it', () => {
+				const slider = document.createElement('input');
+				slider.type = 'range';
+				document.body.appendChild(slider);
+				slider.focus();
+				const kept = ['Home', 'End'].map(code => {
+					const e = new KeyboardEvent('keydown', {
+						key: code,
+						code,
+						bubbles: true,
+						cancelable: true,
+					});
+					slider.dispatchEvent(e);
+					return !e.defaultPrevented;
+				});
+				expect(kept).toEqual([true, true]);
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 10,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
+
+			it('Enter and the arrows on a clicked checkbox in a dialog are left to it', () => {
+				const box = document.createElement('input');
+				box.type = 'checkbox';
+				document.body.appendChild(box);
+				clickFocus(box);
+				State.modal = { isOpen: () => true };
+				const keys = ['Enter', 'ArrowRight', 'ArrowDown'].map(code => {
+					const e = new KeyboardEvent('keydown', {
+						key: code,
+						code,
+						bubbles: true,
+						cancelable: true,
+					});
+					box.dispatchEvent(e);
+					return e.defaultPrevented;
+				});
+				delete State.modal;
+				expect(keys).toEqual([false, false, false]);
+				expect(Toolbar.switchTool).not.toHaveBeenCalled();
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 10,
+					y: 5,
+					width: 1,
+					height: 1,
 				});
 			});
 		});
 
-		it('should generate additional character sets for full coverage', () => {
-			const allChars = new Set();
-			for (let i = 0; i < 256; i++) {
-				allChars.add(i);
-			}
-			expect(allChars.size).toBe(256);
-		});
-	});
+		describe('a fresh pick', () => {
+			let tool;
+			beforeEach(() => {
+				State.selectionCursor = createSelectionCursor(document.createElement('div'));
+				State.cursor.getX.mockReturnValue(10);
+				State.cursor.getY.mockReturnValue(5);
+				tool = createSelectionTool();
+				tool.enable();
+			});
+			afterEach(() => tool.disable());
 
-	describe('Cursor Movement Logic', () => {
-		it('should handle coordinate bounds checking', () => {
-			const clampToCanvas = (x, y, maxX, maxY) => {
-				return {
-					x: Math.min(Math.max(x, 0), maxX),
-					y: Math.min(Math.max(y, 0), maxY),
-				};
-			};
-
-			expect(clampToCanvas(-5, -5, 79, 24)).toEqual({ x: 0, y: 0 });
-			expect(clampToCanvas(100, 100, 79, 24)).toEqual({ x: 79, y: 24 });
-			expect(clampToCanvas(40, 12, 79, 24)).toEqual({ x: 40, y: 12 });
-		});
-
-		it('should handle cursor position calculations', () => {
-			const calculatePosition = (x, y, fontWidth, fontHeight) => {
-				return {
-					left: x * fontWidth - 1,
-					top: y * fontHeight - 1,
-				};
-			};
-
-			expect(calculatePosition(0, 0, 8, 16)).toEqual({ left: -1, top: -1 });
-			expect(calculatePosition(10, 5, 8, 16)).toEqual({ left: 79, top: 79 });
-		});
-	});
-
-	describe('Selection Management', () => {
-		it('should handle selection coordinate normalization', () => {
-			const normalizeSelection = (startX, startY, endX, endY) => {
-				return {
-					startX: Math.min(startX, endX),
-					startY: Math.min(startY, endY),
-					endX: Math.max(startX, endX),
-					endY: Math.max(startY, endY),
-				};
-			};
-
-			expect(normalizeSelection(10, 8, 5, 3)).toEqual({
-				startX: 5,
-				startY: 3,
-				endX: 10,
-				endY: 8,
+			it('opens without a rect or a restore memory', () => {
+				expect(State.selectionCursor.isVisible()).toBe(false);
+				expect(State.selectionCursor.getLastSelection()).toBe(null);
+				expect(State.selectionCursor.getElement().style.display).toBe('none');
 			});
 
-			expect(normalizeSelection(5, 3, 10, 8)).toEqual({
-				startX: 5,
-				startY: 3,
-				endX: 10,
-				endY: 8,
+			it('starts a rect at the keyboard cursor on the first arrow', () => {
+				document.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight' }));
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 11,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
+
+			it('starts a rect at the keyboard cursor when move mode turns on', () => {
+				tool.toggleMoveMode();
+				expect(tool.isMoveMode()).toBe(true);
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 10,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+				tool.toggleMoveMode();
 			});
 		});
-	});
 
-	describe('Clipboard Operations', () => {
-		it('should handle clipboard text processing', () => {
-			const processClipboardText = text => {
-				return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+		describe('rect keys on a bare pick act on the keyboard cursor cell', () => {
+			const cell = { x: 10, y: 5, width: 1, height: 1 };
+			const press = (init, target = document.body) =>
+				target.dispatchEvent(
+					new KeyboardEvent('keydown', { bubbles: true, ...init }),
+				);
+			const fillBuffer = () => {
+				State.pasteTool.setSelection(0, 0, 1, 1);
+				State.pasteTool.copy();
+				State.pasteTool.disable();
+				State.textArtCanvas.getAreaCells.mockClear();
 			};
+			let tool;
+			let drawn;
+			beforeEach(() => {
+				const item = () => document.createElement('div');
+				// boot order: the paste tool's permanent listener registers
+				// long before the selection tool's
+				State.pasteTool = createPasteTool(item(), item(), item(), item());
+				State.selectionCursor = createSelectionCursor(document.createElement('div'));
+				State.cursor.getX.mockReturnValue(10);
+				State.cursor.getY.mockReturnValue(5);
+				drawn = [];
+				State.textArtCanvas.draw = vi.fn(callback =>
+					callback((code, _fg, _bg, x, y) => drawn.push({ code, x, y })));
+				tool = createSelectionTool();
+				tool.enable();
+			});
+			afterEach(() => tool.disable());
 
-			const testText = 'Line 1\r\nLine 2\rLine 3\nLine 4';
-			const processed = processClipboardText(testText);
+			it('ctrl c copies it', () => {
+				press({ code: 'KeyC', ctrlKey: true });
+				expect(State.selectionCursor.getSelection()).toEqual(cell);
+				expect(State.textArtCanvas.getAreaCells).toHaveBeenCalledOnce();
+				expect(State.textArtCanvas.getAreaCells).toHaveBeenCalledWith(10, 5, 1, 1);
+				expect(State.pasteTool.hasBuffer()).toBe(true);
+			});
 
-			expect(processed).toEqual(['Line 1', 'Line 2', 'Line 3', 'Line 4']);
-		});
+			it('ctrl x cuts it in one undo step', () => {
+				press({ code: 'KeyX', metaKey: true });
+				expect(State.textArtCanvas.getAreaCells).toHaveBeenCalledWith(10, 5, 1, 1);
+				expect(State.textArtCanvas.deleteArea).toHaveBeenCalledOnce();
+				expect(State.textArtCanvas.deleteArea).toHaveBeenCalledWith(10, 5, 1, 1, 0);
+				expect(State.textArtCanvas.startUndo).toHaveBeenCalledOnce();
+			});
 
-		it('should handle text to character conversion', () => {
-			const textToChars = text => {
-				return Array.from(text).map(char => char.charCodeAt(0));
-			};
+			it('ctrl v pastes the buffer there once', () => {
+				fillBuffer();
+				press({ code: 'KeyV', ctrlKey: true });
+				expect(State.selectionCursor.getSelection()).toEqual(cell);
+				expect(State.textArtCanvas.setAreaCells).toHaveBeenCalledOnce();
+				expect(State.textArtCanvas.setAreaCells).toHaveBeenCalledWith(
+					expect.anything(),
+					10,
+					5,
+				);
+				expect(State.textArtCanvas.startUndo).toHaveBeenCalledOnce();
+			});
 
-			expect(textToChars('ABC')).toEqual([65, 66, 67]);
-			expect(textToChars('123')).toEqual([49, 50, 51]);
+			it('ctrl shift v pastes the system clipboard there', async () => {
+				const readText = vi.fn(() => Promise.resolve('Z'));
+				Object.defineProperty(navigator, 'clipboard', {
+					value: { readText },
+					configurable: true,
+				});
+				try {
+					press({ code: 'KeyV', ctrlKey: true, shiftKey: true });
+					await new Promise(resolve => setTimeout(resolve, 0));
+					expect(readText).toHaveBeenCalledOnce();
+					expect(drawn).toEqual([{ code: 90, x: 10, y: 5 }]);
+					expect(State.textArtCanvas.startUndo).toHaveBeenCalledOnce();
+				} finally {
+					delete navigator.clipboard;
+				}
+			});
+
+			it('ctrl backspace deletes it in one undo step', () => {
+				press({ code: 'Backspace', ctrlKey: true });
+				expect(State.textArtCanvas.deleteArea).toHaveBeenCalledOnce();
+				expect(State.textArtCanvas.deleteArea).toHaveBeenCalledWith(10, 5, 1, 1, 0);
+				expect(State.textArtCanvas.startUndo).toHaveBeenCalledOnce();
+			});
+
+			it('[ and ] flip it', () => {
+				press({ key: '[' });
+				expect(State.selectionCursor.getSelection()).toEqual(cell);
+				expect(drawn).toEqual([{ code: 32, x: 10, y: 5 }]);
+				State.selectionCursor.hide();
+				press({ key: ']' });
+				expect(drawn).toEqual([
+					{ code: 32, x: 10, y: 5 },
+					{ code: 32, x: 10, y: 5 },
+				]);
+				expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(2);
+			});
+
+			it('ctrl shift v without the Clipboard API leaves the tool bare', () => {
+				const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+				expect(navigator.clipboard).toBeUndefined();
+				press({ code: 'KeyV', ctrlKey: true, shiftKey: true });
+				expect(State.selectionCursor.isVisible()).toBe(false);
+				expect(warn).not.toHaveBeenCalled();
+			});
+
+			it('ctrl v with an empty buffer leaves the tool bare', () => {
+				press({ code: 'KeyV', ctrlKey: true });
+				expect(State.selectionCursor.isVisible()).toBe(false);
+				expect(State.textArtCanvas.setAreaCells).not.toHaveBeenCalled();
+			});
+
+			it('combos the paste tool ignores leave the tool bare', () => {
+				fillBuffer();
+				press({ code: 'KeyV', ctrlKey: true, altKey: true });
+				press({ code: 'KeyC', ctrlKey: true, shiftKey: true });
+				press({ code: 'KeyX', ctrlKey: true, altKey: true });
+				press({ code: 'KeyC' });
+				press({ key: '[', altKey: true });
+				expect(State.selectionCursor.isVisible()).toBe(false);
+				expect(State.textArtCanvas.getAreaCells).not.toHaveBeenCalled();
+				expect(State.textArtCanvas.startUndo).not.toHaveBeenCalled();
+			});
+
+			it('keys typed into a field or a dialog leave the tool bare', () => {
+				const input = document.createElement('input');
+				document.body.appendChild(input);
+				press({ code: 'KeyC', ctrlKey: true }, input);
+				press({ key: '[' }, input);
+				expect(State.selectionCursor.isVisible()).toBe(false);
+
+				State.modal = { isOpen: () => true };
+				try {
+					press({ code: 'KeyC', ctrlKey: true });
+				} finally {
+					delete State.modal;
+				}
+				expect(State.selectionCursor.isVisible()).toBe(false);
+				expect(State.textArtCanvas.getAreaCells).not.toHaveBeenCalled();
+			});
+
+			it('a live rect keeps its geometry', () => {
+				State.selectionCursor.setStart(2, 3);
+				State.selectionCursor.setEnd(4, 3);
+				press({ code: 'KeyC', ctrlKey: true });
+				expect(State.textArtCanvas.getAreaCells).toHaveBeenCalledWith(2, 3, 3, 1);
+			});
+
+			it('leaving the tool takes the seed with it', () => {
+				tool.disable();
+				press({ code: 'KeyC', ctrlKey: true });
+				expect(State.selectionCursor.isVisible()).toBe(false);
+			});
 		});
 	});
 
@@ -978,7 +1773,6 @@ describe('Keyboard Utilities', () => {
 		let drawn;
 
 		beforeEach(() => {
-			vi.clearAllMocks();
 			drawn = [];
 			State.selectionCursor.isVisible = vi.fn(() => true);
 			State.cursor.isVisible = vi.fn(() => false);
@@ -994,6 +1788,33 @@ describe('Keyboard Utilities', () => {
 			State.textArtCanvas.draw = vi.fn(callback => {
 				callback((code, fg, bg, x, y) => drawn.push({ code, fg, bg, x, y }));
 			});
+		});
+
+		it('cut copies the rect, then blanks it to the background', () => {
+			State.palette.getBackgroundColor.mockReturnValueOnce(4);
+			const { getAreaCells, deleteArea } = State.textArtCanvas;
+			const tool = makeTool();
+			tool.setSelection(3, 2, 2, 1);
+			tool.cut();
+			expect(getAreaCells).toHaveBeenCalledWith(3, 2, 2, 1);
+			expect(deleteArea).toHaveBeenCalledWith(3, 2, 2, 1, 4);
+			expect(getAreaCells.mock.invocationCallOrder[0]).toBeLessThan(
+				deleteArea.mock.invocationCallOrder[0],
+			);
+		});
+
+		it('paste lands the copied cells at the current selection', () => {
+			const tool = makeTool();
+			tool.setSelection(0, 0, 2, 1);
+			tool.copy();
+			tool.setSelection(5, 6, 1, 1);
+			tool.paste();
+			expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(1);
+			expect(State.textArtCanvas.setAreaCells).toHaveBeenCalledWith(
+				State.textArtCanvas.getAreaCells.mock.results[0].value,
+				5,
+				6,
+			);
 		});
 
 		it('pasteTransparent skips clipboard blanks', () => {

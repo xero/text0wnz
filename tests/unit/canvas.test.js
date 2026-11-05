@@ -1,7 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createTextArtCanvas } from '../../src/js/client/canvas.js';
+import { createCanvas } from '../../src/js/client/ui.js';
 
-// Set up module mocks first - before importing canvas.js
+const tick = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
+
+// a throw in a frame callback reaches the window; a listener of the
+// test's own keeps vitest from failing the run over the one it expects
+const catchWindowErrors = () => {
+	const errors = [];
+	const onError = event => {
+		errors.push(event.error);
+		event.preventDefault();
+	};
+	window.addEventListener('error', onError);
+	return { errors, stop: () => window.removeEventListener('error', onError) };
+};
+
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
 		font: {
@@ -23,8 +37,21 @@ vi.mock('../../src/js/client/state.js', () => ({
 			close: vi.fn(),
 		},
 		loadingFromStorage: false,
+		saveToLocalStorage: vi.fn(),
 	},
 }));
+
+// jsdom has no WebGL2, so every canvas falls back to the chunk renderer
+// unless a test hands the next one a renderer of its own
+const gl = vi.hoisted(() => ({ next: null }));
+
+vi.mock('../../src/js/client/glRenderer.js', async importOriginal => {
+	const actual = await importOriginal();
+	return {
+		...actual,
+		createGLRenderer: (...args) => gl.next ?? actual.createGLRenderer(...args),
+	};
+});
 
 vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(_id => ({
@@ -64,6 +91,8 @@ vi.mock('../../src/js/client/font.js', () => ({
 			drawWithAlpha: vi.fn(),
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
+			getData: vi.fn(() => ({ width: 8, height: 16 })),
+			dispose: vi.fn(),
 			setLetterSpacing: vi.fn(),
 			getLetterSpacing: vi.fn(() => false),
 		});
@@ -74,6 +103,8 @@ vi.mock('../../src/js/client/font.js', () => ({
 			drawWithAlpha: vi.fn(),
 			getWidth: vi.fn(() => 8),
 			getHeight: vi.fn(() => 16),
+			getData: vi.fn(() => ({ width: 8, height: 16 })),
+			dispose: vi.fn(),
 			setLetterSpacing: vi.fn(),
 			getLetterSpacing: vi.fn(() => false),
 		});
@@ -91,7 +122,6 @@ describe('Canvas Module', () => {
 	let canvas;
 
 	beforeEach(() => {
-		// Clear any large objects from previous tests
 		if (global.gc) {
 			global.gc();
 		}
@@ -103,7 +133,7 @@ describe('Canvas Module', () => {
 			appendChild: vi.fn(),
 			removeChild: vi.fn(),
 			addEventListener: vi.fn(),
-			children: [], // Add children array for DOM operations
+			children: [],
 		};
 		mockCallback = vi.fn();
 	});
@@ -138,7 +168,7 @@ describe('Canvas Module', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 			const data = new Uint16Array(80 * 25);
 			data[0] = (65 << 8) | (8 << 4) | 7;
-			canvas.setImageData(80, 25, data, false, undefined);
+			canvas.setImageData(80, 25, data, false);
 			canvas._blinkTestSeam.stopBlinkTimer();
 			await vi.advanceTimersByTimeAsync(600);
 			State.font.draw.mockClear();
@@ -167,7 +197,7 @@ describe('Canvas Module', () => {
 			await vi.advanceTimersByTimeAsync(600);
 			State.font.draw.mockClear();
 			await vi.advanceTimersByTimeAsync(2000);
-			// a starved waiter used to grab the released mutex here and
+			// a starved waiter must not grab the released mutex here and
 			// restart blink mid-relayout
 			expect(blinkDraws()).toBe(0);
 		});
@@ -199,21 +229,7 @@ describe('Canvas Module', () => {
 		});
 	});
 
-	describe('letter spacing seams', () => {
-		it('setImageData applies a boolean letter spacing', async () => {
-			canvas = createTextArtCanvas(mockContainer, mockCallback);
-			const State = (await import('../../src/js/client/state.js')).default;
-			canvas.setImageData(2, 2, new Uint16Array(4), false, true);
-			expect(State.font.setLetterSpacing).toHaveBeenCalledWith(true);
-		});
-
-		it('setImageData with undefined letter spacing leaves the toggle alone', async () => {
-			canvas = createTextArtCanvas(mockContainer, mockCallback);
-			const State = (await import('../../src/js/client/state.js')).default;
-			canvas.setImageData(2, 2, new Uint16Array(4), false, undefined);
-			expect(State.font.setLetterSpacing).not.toHaveBeenCalled();
-		});
-
+	describe('letter spacing', () => {
 		it('the doc mirrors letter spacing changes', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 			document.dispatchEvent(
@@ -282,24 +298,6 @@ describe('Canvas Module', () => {
 			canvas.startUndo();
 			expect(() => canvas.undo()).not.toThrow();
 			expect(() => canvas.redo()).not.toThrow();
-		});
-
-		it('no longer persists undo history (moved to the OPFS journal)', () => {
-			canvas = createTextArtCanvas(mockContainer, mockCallback);
-
-			// the OPFS journal owns stroke persistence: getUndoHistory reports
-			// nothing to save and setUndoHistory tolerates old v2 autosaves
-			expect(typeof canvas.getUndoHistory).toBe('function');
-			expect(typeof canvas.setUndoHistory).toBe('function');
-			expect(canvas.getUndoHistory()).toBeNull();
-
-			const v2Shape = {
-				currentUndo: [[0, 1234, 0, 0]],
-				undoBuffer: [[[1, 5678, 1, 0]]],
-				redoBuffer: [],
-			};
-			expect(() => canvas.setUndoHistory(v2Shape)).not.toThrow();
-			expect(canvas.getUndoHistory()).toBeNull();
 		});
 
 		it('should handle mirror mode operations', () => {
@@ -388,13 +386,6 @@ describe('Canvas Module', () => {
 			expect(Array.isArray(coalesced)).toBe(true);
 		});
 
-		it('should handle patch buffer operations', () => {
-			canvas = createTextArtCanvas(mockContainer, mockCallback);
-
-			expect(canvas._chunkTestSeam.patchBufferAndEnqueueDirty).toBeDefined();
-			expect(typeof canvas._chunkTestSeam.patchBufferAndEnqueueDirty).toBe('function');
-		});
-
 		it('should handle image data operations', () => {
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
@@ -438,137 +429,265 @@ describe('Canvas Module', () => {
 		});
 	});
 
-	describe('Canvas Utility Functions', () => {
-		it('should mirror horizontal line drawing characters correctly', () => {
-			const getMirrorCharCode = charCode => {
-				switch (charCode) {
-					case 221: // LEFT_HALF_BLOCK
-						return 222; // RIGHT_HALF_BLOCK
-					case 222: // RIGHT_HALF_BLOCK
-						return 221; // LEFT_HALF_BLOCK
-					default:
-						return charCode;
+	describe('cell reads and chunk paints', () => {
+		let State;
+
+		beforeEach(async () => {
+			State = (await import('../../src/js/client/state.js')).default;
+		});
+
+		const loaded = async (rows, data) => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
+			canvas.setImageData(80, rows, data, false);
+			State.font.draw.mockClear();
+			return canvas;
+		};
+
+		it('getBlock unpacks the word at y * columns + x', async () => {
+			const data = new Uint16Array(80 * 25);
+			data[80 + 3] = (65 << 8) | (4 << 4) | 7;
+			await loaded(25, data);
+			expect(canvas.getBlock(3, 1)).toMatchObject({
+				charCode: 65,
+				foregroundColor: 7,
+				backgroundColor: 4,
+			});
+			expect(canvas.getBlock(4, 1).charCode).toBe(0);
+		});
+
+		it('getBlock reads off-canvas coordinates as a blank cell', async () => {
+			await loaded(25, new Uint16Array(80 * 25).fill((65 << 8) | 7));
+			// (80, 0) and (-1, 1) index real cells if the read wraps
+			expect(canvas.getBlock(80, 0).charCode).toBe(0);
+			expect(canvas.getBlock(-1, 1).charCode).toBe(0);
+			expect(canvas.getBlock(0, 25).charCode).toBe(0);
+		});
+
+		it('drawRegion paints only the on-canvas part of a region', async () => {
+			await loaded(25, new Uint16Array(80 * 25));
+			canvas._chunkTestSeam.drawRegion(-5, -5, 20, 20);
+			expect(State.font.draw).toHaveBeenCalledTimes(15 * 15);
+			State.font.draw.mockClear();
+			canvas._chunkTestSeam.drawRegion(75, 20, 10, 10);
+			expect(State.font.draw).toHaveBeenCalledTimes(5 * 5);
+		});
+
+		it('a cell paints at its row within its 25 row chunk', async () => {
+			await loaded(50, new Uint16Array(80 * 50));
+			canvas._chunkTestSeam.drawRegion(3, 30, 1, 1);
+			expect(State.font.draw).toHaveBeenCalledTimes(1);
+			expect(State.font.draw.mock.calls[0].slice(4)).toEqual([3, 5]);
+		});
+
+		it('a dirty paint that throws leaves later dirty paints running', async () => {
+			await loaded(25, new Uint16Array(80 * 25));
+			const caught = catchWindowErrors();
+			State.font.draw.mockImplementation(code => {
+				if (code === 66 && caught.errors.length === 0) {
+					throw new Error('boom');
 				}
+			});
+			try {
+				canvas.draw(cb => cb(66, 7, 0, 1, 1), false);
+				await tick(50);
+				expect(caught.errors).toEqual([expect.objectContaining({ message: 'boom' })]);
+				canvas.draw(cb => cb(67, 7, 0, 2, 2), false);
+				await tick(50);
+				expect(State.font.draw.mock.calls.some(call => call[0] === 67)).toBe(true);
+			} finally {
+				caught.stop();
+				State.font.draw.mockImplementation(() => {});
+			}
+		});
+
+		it('a chunk refused a 2D context paints on a later pass instead of throwing', async () => {
+			await loaded(25, new Uint16Array(80 * 25));
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			vi.mocked(createCanvas).mockImplementationOnce(() => ({
+				style: {},
+				getContext: () => null,
+			}));
+			const data = new Uint16Array(80 * 25).fill((65 << 8) | 7);
+			canvas.setImageData(80, 25, data, false);
+			expect(warn).toHaveBeenCalledWith(
+				'[Canvas] the browser refused a 2D context for a chunk',
+			);
+			const paints = () =>
+				State.font.draw.mock.calls.filter(call => call[0] === 65).length;
+			expect(paints()).toBe(0);
+			canvas.setImageData(80, 25, data, false);
+			expect(paints()).toBeGreaterThanOrEqual(80 * 25);
+		});
+
+		it.each([
+			['scroll', viewport => viewport],
+			['resize', () => window],
+		])('a %s pass that throws leaves later ones painting', async (type, target) => {
+			const viewport = document.createElement('div');
+			viewport.id = 'viewport';
+			document.body.appendChild(viewport);
+			const caught = catchWindowErrors();
+			try {
+				await loaded(25, new Uint16Array(80 * 25));
+				mockContainer.appendChild.mockImplementationOnce(() => {
+					throw new Error('boom');
+				});
+				target(viewport).dispatchEvent(new Event(type));
+				await tick(50);
+				expect(caught.errors).toEqual([expect.objectContaining({ message: 'boom' })]);
+				mockContainer.appendChild.mockClear();
+				target(viewport).dispatchEvent(new Event(type));
+				await tick(50);
+				expect(mockContainer.appendChild).toHaveBeenCalled();
+			} finally {
+				caught.stop();
+				viewport.remove();
+			}
+		});
+
+		it('a blink background paints 8 lower unless ice colors are on', async () => {
+			const data = new Uint16Array(80 * 25);
+			data[0] = (65 << 8) | (12 << 4) | 7;
+			await loaded(25, data);
+			canvas._chunkTestSeam.drawRegion(0, 0, 1, 1);
+			expect(State.font.draw.mock.calls[0][2]).toBe(4);
+			canvas.setIceColors(true);
+			State.font.draw.mockClear();
+			canvas._chunkTestSeam.drawRegion(0, 0, 1, 1);
+			expect(State.font.draw.mock.calls[0].slice(0, 3)).toEqual([65, 7, 12]);
+		});
+	});
+
+	describe('relayouts', () => {
+		let State;
+		let modal;
+
+		beforeEach(async () => {
+			State = (await import('../../src/js/client/state.js')).default;
+			modal = State.modal;
+		});
+
+		afterEach(() => {
+			State.modal = modal;
+		});
+
+		const booted = async () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
+			mockContainer.appendChild.mockClear();
+		};
+
+		// one modal stack, shared by every canvas this file has built
+		const modalShowing = open => {
+			State.modal = {
+				current: () => open,
+				loading: vi.fn(() => {
+					open = 'loading';
+				}),
+				close: vi.fn(() => {
+					open = false;
+				}),
 			};
+			return State.modal;
+		};
 
-			expect(getMirrorCharCode(221)).toBe(222);
-			expect(getMirrorCharCode(222)).toBe(221);
-			expect(getMirrorCharCode(65)).toBe(65); // Normal character unchanged
+		const relayout = async () => {
+			document.dispatchEvent(new CustomEvent('onPaletteChange'));
+			await tick(50);
+		};
+
+		it('veils the editor while it runs and lifts the veil once it lands', async () => {
+			await booted();
+			const shown = modalShowing(false);
+			await relayout();
+			expect(mockContainer.appendChild).toHaveBeenCalled();
+			expect(shown.loading).toHaveBeenCalledWith('Updating editor with new settings...');
+			expect(shown.current()).toBe(false);
 		});
 
-		it('should calculate array indices from coordinates correctly', () => {
-			const columns = 80;
-			const getArrayIndex = (x, y) => y * columns + x;
-
-			expect(getArrayIndex(0, 0)).toBe(0);
-			expect(getArrayIndex(79, 0)).toBe(79);
-			expect(getArrayIndex(0, 1)).toBe(80);
-			expect(getArrayIndex(79, 24)).toBe(79 + 24 * 80); // Last position in 80x25 grid
+		it('leaves a modal the user has open alone', async () => {
+			await booted();
+			const shown = modalShowing('sauce');
+			await relayout();
+			expect(mockContainer.appendChild).toHaveBeenCalled();
+			expect(shown.loading).not.toHaveBeenCalled();
+			expect(shown.close).not.toHaveBeenCalled();
 		});
 
-		it('should validate coordinate bounds', () => {
-			const columns = 80;
-			const rows = 25;
+		it('leaves a loading modal another flow opened for that flow to close', async () => {
+			await booted();
+			const shown = modalShowing('loading');
+			await relayout();
+			expect(mockContainer.appendChild).toHaveBeenCalled();
+			expect(shown.close).not.toHaveBeenCalled();
+		});
 
-			const isValidCoordinate = (x, y) => {
-				return x >= 0 && x < columns && y >= 0 && y < rows;
+		it('one that throws lifts its veil and leaves the next one free to run', async () => {
+			await booted();
+			const shown = modalShowing(false);
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const font = State.font;
+			const { getWidth } = font;
+			font.getWidth = () => {
+				throw new Error('boom');
 			};
-
-			expect(isValidCoordinate(0, 0)).toBe(true);
-			expect(isValidCoordinate(79, 24)).toBe(true);
-			expect(isValidCoordinate(-1, 0)).toBe(false);
-			expect(isValidCoordinate(80, 0)).toBe(false);
-			expect(isValidCoordinate(0, 25)).toBe(false);
+			try {
+				await relayout();
+			} finally {
+				font.getWidth = getWidth;
+			}
+			expect(error).toHaveBeenCalledWith(
+				'[Canvas] relayout failed:',
+				expect.objectContaining({ message: 'boom' }),
+			);
+			expect(shown.current()).toBe(false);
+			shown.loading.mockClear();
+			await relayout();
+			expect(shown.loading).toHaveBeenCalled();
+			expect(shown.current()).toBe(false);
+			expect(mockContainer.appendChild).toHaveBeenCalled();
 		});
 
-		it('should encode character data correctly', () => {
-			const encodeCharBlock = (charCode, foreground, background) => {
-				return (charCode << 8) | (background << 4) | foreground;
+		it('one whose GL rebuild throws restarts the blink it stopped', async () => {
+			const renderer = {
+				rebuild: vi.fn(),
+				redraw: vi.fn(done => done?.()),
+				drawRegion: vi.fn(),
+				updateBlink: vi.fn(),
 			};
-
-			const charCode = 65; // 'A'
-			const foreground = 7; // White
-			const background = 0; // Black
-
-			const encoded = encodeCharBlock(charCode, foreground, background);
-			expect(encoded).toBe((65 << 8) | (0 << 4) | 7); // 16647
+			gl.next = renderer;
+			try {
+				await booted();
+			} finally {
+				gl.next = null;
+			}
+			modalShowing(false);
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+			renderer.rebuild.mockImplementationOnce(() => {
+				throw new Error('boom');
+			});
+			renderer.updateBlink.mockClear();
+			try {
+				await relayout();
+				expect(error).toHaveBeenCalledWith(
+					'[Canvas] relayout failed:',
+					expect.objectContaining({ message: 'boom' }),
+				);
+				expect(renderer.updateBlink).toHaveBeenCalled();
+			} finally {
+				error.mockRestore();
+			}
 		});
+	});
 
-		it('should decode character data correctly', () => {
-			const decodeCharBlock = data => {
-				return {
-					charCode: data >> 8,
-					background: (data >> 4) & 15,
-					foreground: data & 15,
-				};
-			};
-
-			const encoded = (65 << 8) | (4 << 4) | 7; // 'A', red background, white foreground
-			const decoded = decodeCharBlock(encoded);
-
-			expect(decoded.charCode).toBe(65);
-			expect(decoded.background).toBe(4);
-			expect(decoded.foreground).toBe(7);
-		});
-
-		it('should handle blink attribute correctly', () => {
-			// Test blink attribute detection (background color >= 8)
-			const hasBlinkAttribute = background => background >= 8;
-
-			expect(hasBlinkAttribute(0)).toBe(false);
-			expect(hasBlinkAttribute(7)).toBe(false);
-			expect(hasBlinkAttribute(8)).toBe(true);
-			expect(hasBlinkAttribute(15)).toBe(true);
-		});
-
-		it('should convert blink colors correctly', () => {
-			const normalizeBlinkColor = background => {
-				return background >= 8 ? background - 8 : background;
-			};
-
-			expect(normalizeBlinkColor(8)).toBe(0);
-			expect(normalizeBlinkColor(15)).toBe(7);
-			expect(normalizeBlinkColor(4)).toBe(4); // No change for non-blink colors
-		});
-
-		it('should calculate region bounds correctly', () => {
-			const clipRegion = (x, y, width, height, canvasWidth, canvasHeight) => {
-				const clippedX = Math.max(0, Math.min(x, canvasWidth - 1));
-				const clippedY = Math.max(0, Math.min(y, canvasHeight - 1));
-				const clippedWidth = Math.min(width, canvasWidth - clippedX);
-				const clippedHeight = Math.min(height, canvasHeight - clippedY);
-
-				return {
-					x: clippedX,
-					y: clippedY,
-					width: Math.max(0, clippedWidth),
-					height: Math.max(0, clippedHeight),
-				};
-			};
-
-			const result = clipRegion(-5, -5, 20, 20, 80, 25);
-			expect(result.x).toBe(0);
-			expect(result.y).toBe(0);
-			expect(result.width).toBe(20); // width remains 20 since 0 + 20 < 80
-			expect(result.height).toBe(20); // height remains 20 since 0 + 20 < 25
-		});
-
-		it('should calculate canvas context indices correctly', () => {
-			// Test context calculation for large canvases (multiple 25-row contexts)
-			const getContextIndex = y => Math.floor(y / 25);
-			const getContextY = y => y % 25;
-
-			expect(getContextIndex(0)).toBe(0);
-			expect(getContextIndex(24)).toBe(0);
-			expect(getContextIndex(25)).toBe(1);
-			expect(getContextIndex(49)).toBe(1);
-			expect(getContextIndex(50)).toBe(2);
-
-			expect(getContextY(0)).toBe(0);
-			expect(getContextY(24)).toBe(24);
-			expect(getContextY(25)).toBe(0);
-			expect(getContextY(49)).toBe(24);
-			expect(getContextY(50)).toBe(0);
+	describe('clear', () => {
+		it('names the blank doc Untitled', async () => {
+			const State = (await import('../../src/js/client/state.js')).default;
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			State.title = 'art';
+			canvas.clear();
+			expect(State.title).toBe('Untitled');
 		});
 	});
 
@@ -668,7 +787,7 @@ describe('Canvas Module', () => {
 
 			const newImageData = new Uint16Array(80 * 25);
 			expect(() => {
-				canvas.setImageData(80, 25, newImageData, false, false);
+				canvas.setImageData(80, 25, newImageData, false);
 			}).not.toThrow();
 		});
 	});
@@ -723,15 +842,23 @@ describe('Canvas Module', () => {
 			expect(xbData).toBeNull();
 		});
 
-		it('should support setting XB font data', () => {
+		it('setXBFontData hands the bytes back until clearXBData drops them', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+			const bytes = new Uint8Array(4096).fill(0x55);
 
-			expect(typeof canvas.setXBFontData).toBe('function');
+			expect(canvas.setXBFontData(bytes, 8, 16)).toBe(true);
+			expect(canvas.getXBFontData()).toEqual({ bytes, width: 8, height: 16 });
+			canvas.clearXBData();
+			expect(canvas.getXBFontData()).toBeNull();
+		});
 
-			const mockFontData = new Uint8Array(4096);
-			expect(() => {
-				canvas.setXBFontData(mockFontData, 8, 16);
-			}).not.toThrow();
+		it('setXBFontData refuses empty bytes and keeps no font', () => {
+			const canvas = createTextArtCanvas(mockContainer, mockCallback);
+			const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+			expect(canvas.setXBFontData(new Uint8Array(0), 8, 16)).toBe(false);
+			expect(canvas.getXBFontData()).toBeNull();
+			error.mockRestore();
 		});
 	});
 
@@ -746,12 +873,6 @@ describe('Canvas Module', () => {
 			const canvas = createTextArtCanvas(mockContainer, mockCallback);
 
 			expect(typeof canvas._chunkTestSeam.coalesceRegions).toBe('function');
-		});
-
-		it('should support patch buffer and enqueue dirty', () => {
-			const canvas = createTextArtCanvas(mockContainer, mockCallback);
-
-			expect(typeof canvas._chunkTestSeam.patchBufferAndEnqueueDirty).toBe('function');
 		});
 	});
 
@@ -771,7 +892,6 @@ describe('Canvas Module', () => {
 			const State = (await import('../../src/js/client/state.js')).default;
 			canvas = createTextArtCanvas(mockContainer, mockCallback);
 
-			// Wait for the initial font load and canvas creation to finish
 			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
 
 			const fontDraw = State.font.draw;
@@ -822,6 +942,143 @@ describe('Canvas Module', () => {
 
 			expect(typeof canvas.getBlock).toBe('function');
 			expect(typeof canvas.getHalfBlock).toBe('function');
+		});
+	});
+
+	describe('collab cells', () => {
+		let State;
+
+		beforeEach(async () => {
+			State = (await import('../../src/js/client/state.js')).default;
+		});
+
+		afterEach(() => {
+			delete State.network;
+		});
+
+		it('a NUL leaves as U+0000 and a 255 as NBSP', () => {
+			const draw = vi.fn();
+			State.network = { draw, isConnected: () => true, extCollab: () => true };
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			canvas.draw(cb => {
+				cb(0, 7, 1, 0, 0);
+				cb(255, 7, 1, 1, 0);
+				cb(65, 7, 1, 2, 0);
+			}, false);
+			const sent = draw.mock.calls.flatMap(([cells]) => cells.map(cell => cell.ext.u));
+			expect(sent).toEqual([0, 0xa0, 0x41]);
+		});
+
+		it('a peer\'s text, NUL, and 255 land on the classic font', async () => {
+			State.network = { isConnected: () => true, extCollab: () => true };
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			await canvas.drawRemoteExtCells(
+				[0x41, 0, 0xa0, 0x20].map((u, x) => ({ x, y: 0, u, a: 0, fg: 7, bg: 1 })),
+			);
+			const glyphs = canvas.getDoc().frames[0].glyph;
+			const ids = Array.from(glyphs.subarray(0, 4), word => word & 0xffff);
+			expect(ids).toEqual([0x41, 0, 255, 0x20]);
+		});
+	});
+
+	describe('resize history', () => {
+		let State;
+		const word = (65 << 8) | (4 << 4) | 7;
+
+		beforeEach(async () => {
+			State = (await import('../../src/js/client/state.js')).default;
+		});
+
+		afterEach(() => {
+			delete State.network;
+			delete State.historyLabels;
+		});
+
+		// an 80x25 doc with one cell a shrink to 40x20 cuts off
+		const loaded = async () => {
+			canvas = createTextArtCanvas(mockContainer, mockCallback);
+			await vi.waitFor(() => expect(mockCallback).toHaveBeenCalled());
+			const data = new Uint16Array(80 * 25);
+			data[20 * 80 + 70] = word;
+			canvas.setImageData(80, 25, data, false);
+			return canvas;
+		};
+
+		it('undo restores the size and the cells a resize cut off', async () => {
+			await loaded();
+			const sizes = [];
+			const onSize = e => sizes.push(e.detail);
+			document.addEventListener('onTextCanvasSizeChange', onSize);
+			try {
+				canvas.resize(40, 20);
+				canvas.undo();
+				expect([canvas.getColumns(), canvas.getRows()]).toEqual([80, 25]);
+				expect(canvas.getBlock(70, 20).charCode).toBe(65);
+				// the u16 mirror follows the geometry back
+				expect(canvas.getImageData().length).toBe(80 * 25);
+				expect(canvas.getImageData()[20 * 80 + 70]).toBe(word);
+
+				canvas.redo();
+				expect([canvas.getColumns(), canvas.getRows()]).toEqual([40, 20]);
+				expect(canvas.getImageData().length).toBe(40 * 20);
+			} finally {
+				document.removeEventListener('onTextCanvasSizeChange', onSize);
+			}
+			expect(sizes).toEqual([
+				{ columns: 40, rows: 20 },
+				{ columns: 80, rows: 25 },
+				{ columns: 40, rows: 20 },
+			]);
+		});
+
+		it('a session undo sends the size change before the restored cells', async () => {
+			await loaded();
+			canvas.resize(40, 20);
+			State.network = {
+				isConnected: () => true,
+				sendResize: vi.fn(),
+				draw: vi.fn(),
+			};
+			canvas.undo();
+			expect(State.network.sendResize).toHaveBeenCalledWith(80, 25);
+			const draw = State.network.draw;
+			expect(draw).toHaveBeenCalledTimes(1);
+			expect(draw.mock.calls[0][0]).toEqual([expect.objectContaining({ x: 70, y: 20, block: { code: 65, fg: 7, bg: 4 } })]);
+			expect(State.network.sendResize.mock.invocationCallOrder[0]).toBeLessThan(
+				draw.mock.invocationCallOrder[0],
+			);
+
+			canvas.redo();
+			expect(State.network.sendResize).toHaveBeenLastCalledWith(40, 20);
+		});
+
+		it('a stroke undo sends no resize', async () => {
+			await loaded();
+			State.network = { sendResize: vi.fn(), draw: vi.fn() };
+			canvas.startUndo();
+			canvas.draw(cb => cb(66, 7, 0, 1, 1));
+			canvas.undo();
+			expect(State.network.sendResize).not.toHaveBeenCalled();
+		});
+
+		it('a peer resize clears the history', async () => {
+			await loaded();
+			canvas.resize(40, 20, { undoable: false });
+			canvas.undo();
+			expect([canvas.getColumns(), canvas.getRows()]).toEqual([40, 20]);
+		});
+
+		it('the history flyout names the step and drops rows with the history', async () => {
+			State.historyLabels = {
+				committed: vi.fn(),
+				cleared: vi.fn(),
+				undone: vi.fn(),
+				redone: vi.fn(),
+			};
+			await loaded();
+			expect(State.historyLabels.cleared).toHaveBeenCalled();
+			canvas.resize(100, 30);
+			expect(State.historyLabels.committed).toHaveBeenCalledWith('Resize 100x30');
 		});
 	});
 });

@@ -1,7 +1,6 @@
 /**
- * WebGL2 text renderer, the editor's DEFAULT renderer.
- * ?renderer=2d forces the legacy chunk renderer, which is also the
- * automatic fallback wherever webgl2 is unavailable.
+ * WebGL2 text renderer, the editor's default; the legacy chunk
+ * renderer is the ?renderer=2d and no-webgl2 fallback.
  *
  * Architecture: the slack-buffer pattern. One canvas positioned
  * absolutely inside #canvasContainer, sized to the viewport plus slack
@@ -19,27 +18,26 @@
  * same 500ms cadence as the 2D path. Exports rasterize on the CPU from
  * the same planes (byte-equal to the 2D glyph blits at integer zoom).
  *
- * Glyph ids are 16-bit: 0-255 address the classic atlas,
- * higher ids are doc glyph-table entries rendered from the hex font
- * pages. The repaint interleave remaps those ids to slots in a
- * second, grow-on-demand atlas texture; a glyph whose block has not
- * arrived yet (hexFontPages fetches lazily and repaints on landing),
- * is absent, or is wide under the v1 single-width policy renders the
+ * Glyph ids are 16-bit: 0-255 address the classic atlas, higher ids
+ * are doc glyph-table entries rendered from the hex font pages. The
+ * repaint interleave remaps those ids to slots in a second,
+ * grow-on-demand atlas texture; a glyph whose block has not arrived
+ * yet (hexFontPages fetches lazily and repaints on landing), is
+ * absent, or is wide under the v1 single-width policy renders the
  * reserved substitute slot (a hollow box, deliberately distinct from
  * any real glyph).
  *
- * Context loss is intercepted and GL state rebuilt on restore;
- * repeated loss leaves the last frame visible and logs.
+ * Context loss is intercepted and GL state rebuilt on restore.
  */
 import State from './state.js';
 import { createCanvas } from './ui.js';
 import { xterm256RGB } from '../core/codecs/dur.js';
 
-// Baselined in tests/baselines/p1-scroll-spike.json for zero blank
-// frames; the baseline never measured frame TIME, and a re-anchor is
-// a whole synchronous repaint, so steady scrolling also needs them
-// RARE: deep slack plus direction-biased anchoring buys over a
-// viewport-height of travel between re-anchors instead of a quarter
+// tests/baselines/p1-scroll-spike.json pins zero blank frames but not
+// frame TIME, and a re-anchor is a whole synchronous repaint, so
+// steady scrolling also needs re-anchors RARE: deep slack plus
+// direction-biased anchoring buys over a viewport-height of travel
+// between them instead of a quarter
 const SLACK_SCREENS = 2;
 const TOLERANCE_SCREENS = 0.5;
 // how much runway to leave BEHIND the travel direction on re-anchor
@@ -131,9 +129,9 @@ void main() {
 /**
  * @param {HTMLElement} canvasContainer - the sized, scrolled content element
  * @param {Object} host - doc accessors from the text art canvas closure:
- *   { getColumns, getRows, getPlanes, getIceColors, getGlyphDef,
- *     getHexPages } - the last two feed the unicode glyph pages and are
- *   optional (absent means ids >= 256 render the substitute box)
+ *   { getColumns, getRows, getPlanes, getIceColors, getDocPlanes,
+ *   getPalette, getGlyphDef, getHexPages }. getDocPlanes feeds exports,
+ *   getPalette entries 16-255, and the last two the unicode glyph pages
  * @returns {Object|null} renderer, or null when WebGL2 is unavailable
  */
 const createGLRenderer = (canvasContainer, host) => {
@@ -146,8 +144,8 @@ const createGLRenderer = (canvasContainer, host) => {
 		depth: false,
 		stencil: false,
 	});
-	// Guard against partial contexts too (test shims, broken drivers): the
-	// caller falls back to the chunk renderer on null
+	// partial contexts too (test shims, broken drivers): the caller
+	// falls back to the chunk renderer on null
 	if (!gl || typeof gl.drawArraysInstanced !== 'function') {
 		return null;
 	}
@@ -161,12 +159,10 @@ const createGLRenderer = (canvasContainer, host) => {
 	let scale = 1;
 	let fontBits = null;
 
-	// slack-buffer geometry
 	let anchorRow = 0;
 	let canvasRows = 0;
 	let coverageRows = 0;
 
-	// blink state
 	let blinkOn = false;
 	let blinkInterval = null;
 	let hasBlink = false;
@@ -185,7 +181,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		return shader;
 	};
 
-	// create all GL objects; called at construction and after context restore
+	// also reruns after context restore, so it must create every GL object
 	const initGL = () => {
 		const program = gl.createProgram();
 		gl.attachShader(program, compile(gl.VERTEX_SHADER, VERTEX_SRC));
@@ -242,12 +238,11 @@ const createGLRenderer = (canvasContainer, host) => {
 	};
 	initGL();
 
-	// unpack the 1bpp font into cached per-glyph bit rows (shared by the
-	// atlas upload and the CPU export rasterizer). Deliberately capped at
-	// 256 glyphs: ids above 255 are doc glyph-table entries served by the
-	// unicode pages, never the classic font, so the upper page of a
-	// 512-glyph XB font is unaddressable here (it still survives save
-	// round-trips at the codec level).
+	// per-glyph bit rows shared by the atlas upload and the CPU export
+	// rasterizer. Deliberately capped at 256 glyphs: ids above 255 are
+	// doc glyph-table entries served by the unicode pages, so a
+	// 512-glyph XB font's upper page renders through its FONT_SLOT_XB
+	// glyph defs, never this atlas
 	const unpackFontBits = fontData => {
 		const bits = new Uint8Array(fontData.width * fontData.height * 256);
 		for (let k = 0; k < bits.length; k++) {
@@ -271,8 +266,8 @@ const createGLRenderer = (canvasContainer, host) => {
 				}
 			}
 		}
-		// every rebuild used to orphan the previous texture; continuous
-		// pinch zoom leaked one per frame until the context GC bothered
+		// delete before replacing: continuous pinch zoom rebuilds every
+		// frame and would leak a texture per frame until the context GC ran
 		if (atlasTexture) {
 			gl.deleteTexture(atlasTexture);
 		}
@@ -297,10 +292,10 @@ const createGLRenderer = (canvasContainer, host) => {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	};
 
-	// ------------------------------------------------ unicode glyph pages
-	// Slot grid matches the classic atlas (16 glyphs per row at font
-	// resolution); slot 0 is the substitute box, rows double on demand up
-	// to SLOT_CAP, then the map resets and repaints refill what's visible.
+	// unicode slot grid matches the classic atlas (16 glyphs per row at
+	// font resolution); slot 0 is the substitute box, rows double on
+	// demand up to SLOT_CAP, then the map resets and repaints refill
+	// what's visible
 	const SLOT_CAP = 4096;
 	let unicodeTexture = null;
 	let unicodeSlotRows = 16;
@@ -421,10 +416,9 @@ const createGLRenderer = (canvasContainer, host) => {
 		if (known !== undefined) {
 			return known;
 		}
-		const def = host.getGlyphDef ? host.getGlyphDef(glyphId) : undefined;
-		const pages = def && host.getHexPages ? host.getHexPages() : null;
-		const bits = pages
-			? pages.glyphBits(def.fontSlot, def.codepoint, fontW, fontH)
+		const def = host.getGlyphDef(glyphId);
+		const bits = def
+			? host.getHexPages().glyphBits(def.fontSlot, def.codepoint, fontW, fontH)
 			: null;
 		if (bits === undefined) {
 			return 0;
@@ -440,15 +434,9 @@ const createGLRenderer = (canvasContainer, host) => {
 		return slot;
 	};
 
-	// repaint-path remap: ids 0-255 pass through, higher ids become
-	// 256 + slot with the attr byte preserved
-	const mapGlyphWord = word => {
-		const glyphId = word & 0xffff;
-		if (glyphId < 256) {
-			return word;
-		}
-		return ((word & 0xffff0000) | (256 + slotForGlyphId(glyphId))) >>> 0;
-	};
+	// repaint-path remap for ids >= 256: 256 + slot, attr byte preserved
+	const mapGlyphWord = word =>
+		((word & 0xffff0000) | (256 + slotForGlyphId(word & 0xffff))) >>> 0;
 
 	let paletteTexture = null;
 	const uploadPalette = () => {
@@ -464,7 +452,7 @@ const createGLRenderer = (canvasContainer, host) => {
 			const rgba = State.palette.getRGBAColor(i);
 			pixels.set([rgba[0], rgba[1], rgba[2], 255], i * 4);
 		}
-		const docPalette = host.getPalette ? host.getPalette() : null;
+		const docPalette = host.getPalette();
 		for (let i = 16; i < 256; i++) {
 			const word =
 				docPalette && i < docPalette.length
@@ -657,11 +645,8 @@ const createGLRenderer = (canvasContainer, host) => {
 
 	// the renderer's redrawEntireImage: coverage repaint is sub-frame, so
 	// "progressive" collapses to one paint + the same completion contract
-	const redraw = (onProgress, onComplete) => {
+	const redraw = onComplete => {
 		repaint();
-		if (onProgress) {
-			onProgress(100);
-		}
 		if (onComplete) {
 			requestAnimationFrame(onComplete);
 		}
@@ -669,16 +654,12 @@ const createGLRenderer = (canvasContainer, host) => {
 	};
 
 	// cell-level invalidations: anything inside coverage repaints it whole
-	// (one instanced draw, ~0.05ms)
-	const drawRegion = (x, y, w, h) => {
+	// (one instanced draw, ~0.05ms), so only the rows matter
+	const drawRegion = (y, h) => {
 		if (y + h <= anchorRow || y >= anchorRow + coverageRows) {
 			return;
 		}
 		repaint();
-	};
-
-	const drawCell = (x, y) => {
-		drawRegion(x, y, 1, 1);
 	};
 
 	const updateBlink = () => {
@@ -702,13 +683,10 @@ const createGLRenderer = (canvasContainer, host) => {
 	 * (nearest-neighbor at any scale, ninth-column rule, blink drawn in its
 	 * visible phase), reading only doc data + 1bpp font + palette.
 	 */
-	const exportPlanes = () =>
-		(host.getDocPlanes ?? host.getPlanes)();
-
 	const getImageRGBA = () => {
 		const columns = host.getColumns();
 		const rows = host.getRows();
-		const { glyph, fg: fgPlane, bg: bgPlane } = exportPlanes();
+		const { glyph, fg: fgPlane, bg: bgPlane } = host.getDocPlanes();
 		const width = cellW * columns;
 		const height = cellH * rows;
 		const data = new Uint8ClampedArray(width * height * 4);
@@ -716,7 +694,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		for (let i = 0; i < 16; i++) {
 			colors.push(State.palette.getRGBAColor(i));
 		}
-		const docPalette = host.getPalette ? host.getPalette() : null;
+		const docPalette = host.getPalette();
 		for (let i = 16; i < 256; i++) {
 			const word =
 				docPalette && i < docPalette.length ? docPalette[i] : xterm256RGB(i);
@@ -735,10 +713,9 @@ const createGLRenderer = (canvasContainer, host) => {
 			if (slot !== undefined && slot > 0) {
 				return slotBits[slot];
 			}
-			const def = host.getGlyphDef ? host.getGlyphDef(glyphId) : undefined;
-			const pages = def && host.getHexPages ? host.getHexPages() : null;
-			const bits = pages
-				? pages.glyphBits(def.fontSlot, def.codepoint, fontW, fontH)
+			const def = host.getGlyphDef(glyphId);
+			const bits = def
+				? host.getHexPages().glyphBits(def.fontSlot, def.codepoint, fontW, fontH)
 				: null;
 			return bits || substituteBits();
 		};
@@ -787,7 +764,7 @@ const createGLRenderer = (canvasContainer, host) => {
 		return completeCanvas;
 	};
 
-	// context loss: intercept and rebuild on restore
+	// without preventDefault the browser never restores the context
 	canvas.addEventListener('webglcontextlost', event => {
 		event.preventDefault();
 		contextLost = true;
@@ -815,11 +792,9 @@ const createGLRenderer = (canvasContainer, host) => {
 		rebuild,
 		redraw,
 		drawRegion,
-		drawCell,
 		updateBlink,
 		getImage,
 		getImageRGBA,
-		canvas,
 	};
 };
 

@@ -40,4 +40,27 @@ describe('history labels', () => {
 			'Type',
 		]);
 	});
+
+	it('a named commit leaves the open stroke its own label', () => {
+		const labels = createHistoryLabels();
+		labels.pend('Fill');
+		labels.opened(); // the stroke opens, then a resize lands first
+		labels.committed('Resize 100x30');
+		labels.committed();
+		expect(labels.steps().map(s => s.label)).toEqual(['Resize 100x30', 'Fill']);
+	});
+
+	it('a cleared history drops every row', () => {
+		const labels = createHistoryLabels();
+		const listener = vi.fn();
+		labels.onChange(listener);
+		labels.committed();
+		labels.committed();
+		labels.undone();
+		labels.cleared();
+		expect(labels.steps()).toEqual([]);
+		expect(labels.depth()).toBe(0);
+		expect(labels.count()).toBe(0);
+		expect(listener).toHaveBeenCalledTimes(4);
+	});
 });

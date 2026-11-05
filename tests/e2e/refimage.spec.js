@@ -11,7 +11,7 @@ const PNG = Buffer.from(
 );
 
 const loadRef = async page => {
-	// the ref toggle lives in the viewport toolbar behind the View tool
+	// the ref toggle lives in the View flyout
 	await page.locator('#navView').click();
 	await clickViewToggle(page, 'navRef');
 	await page.locator('#refFileInput').setInputFiles({
@@ -115,7 +115,6 @@ test.describe('Reference image', () => {
 			'aria-pressed',
 			'false',
 		);
-		// a restored trace reopens its panel and relights the nav button
 		await expect(page.locator('#refPanel')).toBeVisible();
 		await page.locator('#navView').click();
 		await expect(page.locator('#navRef')).toHaveClass(/enabled/);

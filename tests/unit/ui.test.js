@@ -45,7 +45,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 }));
 
 describe('UI Utilities', () => {
-	// Helper to create events that work in both Node and browser environments
+	// works in both Node and browser environments
 	const createEvent = (type, props = {}) => {
 		const event = document.createEvent('Event');
 		event.initEvent(type, true, true);
@@ -96,7 +96,6 @@ describe('UI Utilities', () => {
 
 			const toggle = createSettingToggle(mockDiv, getter, setter);
 
-			expect(toggle).toHaveProperty('sync');
 			expect(toggle).toHaveProperty('update');
 			expect(getter).toHaveBeenCalled();
 		});
@@ -140,21 +139,14 @@ describe('UI Utilities', () => {
 			expect(setter).toHaveBeenCalledWith(true);
 		});
 
-		it('should sync with new getter and setter', () => {
+		it('update re-reads the getter', () => {
 			const mockDiv = document.createElement('div');
-			const testValue = false;
-			const getter = vi.fn(() => testValue);
-			const setter = vi.fn();
+			let value = false;
+			const toggle = createSettingToggle(mockDiv, () => value, vi.fn());
 
-			const toggle = createSettingToggle(mockDiv, getter, setter);
+			value = true;
+			toggle.update();
 
-			const newValue = true;
-			const newGetter = vi.fn(() => newValue);
-			const newSetter = vi.fn();
-
-			toggle.sync(newGetter, newSetter);
-
-			expect(newGetter).toHaveBeenCalled();
 			expect(mockDiv.classList.contains('enabled')).toBe(true);
 		});
 	});
@@ -196,6 +188,96 @@ describe('UI Utilities', () => {
 				sourceDiv.dispatchEvent(enterEvent);
 
 				expect(targetDiv.click).not.toHaveBeenCalled();
+			});
+
+			it('activates on Shift+Enter in a field without shiftBreaks', () => {
+				const input = document.createElement('input');
+				const done = document.createElement('button');
+				done.click = vi.fn();
+				onReturn(input, done);
+				input.dispatchEvent(
+					new window.KeyboardEvent('keydown', {
+						key: 'Enter',
+						shiftKey: true,
+						cancelable: true,
+					}),
+				);
+				expect(done.click).toHaveBeenCalledTimes(1);
+			});
+
+			describe('with shiftBreaks on the Comments textarea', () => {
+				const keydown = init =>
+					new window.KeyboardEvent('keydown', {
+						key: 'Enter',
+						cancelable: true,
+						...init,
+					});
+
+				// jsdom runs no default actions: a keydown nobody cancels goes
+				// on to beforeinput and then the textarea's own line break, as
+				// in a browser
+				const pressEnter = (el, init) => {
+					const down = keydown(init);
+					el.dispatchEvent(down);
+					if (!down.defaultPrevented) {
+						const before = new window.InputEvent('beforeinput', {
+							inputType: 'insertLineBreak',
+							cancelable: true,
+						});
+						el.dispatchEvent(before);
+						if (!before.defaultPrevented) {
+							el.setRangeText('\n', el.selectionStart, el.selectionEnd, 'end');
+							el.dispatchEvent(new window.Event('input'));
+						}
+					}
+					return down;
+				};
+
+				const setup = () => {
+					document.body.innerHTML =
+						'<textarea id="sauceComments"></textarea><input id="sauceBytes">';
+					const comments = $('sauceComments');
+					const done = document.createElement('button');
+					done.click = vi.fn();
+					comments.addEventListener('input', enforceMaxBytes);
+					onReturn(comments, done, { shiftBreaks: true });
+					comments.value = 'greets';
+					comments.setSelectionRange(6, 6);
+					return { comments, done };
+				};
+
+				it('types a line break on Shift+Enter and the counter follows', () => {
+					const { comments, done } = setup();
+					const down = pressEnter(comments, { shiftKey: true });
+					expect(down.defaultPrevented).toBe(false);
+					expect(done.click).not.toHaveBeenCalled();
+					expect(comments.value).toBe('greets\n');
+					expect($('sauceBytes').value).toBe('128/16320 bytes');
+				});
+
+				it('activates on plain Enter and types nothing', () => {
+					const { comments, done } = setup();
+					expect(pressEnter(comments).defaultPrevented).toBe(true);
+					expect(done.click).toHaveBeenCalledTimes(1);
+					expect(comments.value).toBe('greets');
+				});
+
+				it('leaves an Enter that commits an IME composition to the IME', () => {
+					const { comments, done } = setup();
+					for (const init of [
+						{ isComposing: true },
+						{ shiftKey: true, isComposing: true },
+						{ keyCode: 229 },
+					]) {
+						const down = keydown(init);
+						comments.dispatchEvent(down);
+						expect(down.defaultPrevented).toBe(false);
+					}
+					// WebKit: compositionend, then a bare keydown in the same cycle
+					comments.dispatchEvent(new window.CompositionEvent('compositionend'));
+					comments.dispatchEvent(keydown());
+					expect(done.click).not.toHaveBeenCalled();
+				});
 			});
 		});
 
@@ -454,7 +536,7 @@ describe('UI Utilities', () => {
 	describe('websocketUI', () => {
 		// the stylesheet gates .includedForWebsocket and
 		// .excludedForWebsocket on one document attribute; inline
-		// display writes lost to the sauce panel's id rule
+		// display writes lose to the sauce panel's id rule
 		it('marks the document collab-on when show is true', () => {
 			websocketUI(true);
 			expect(document.documentElement.dataset.collab).toBe('on');
@@ -783,7 +865,6 @@ describe('UI Utilities', () => {
 
 			createPaintShortcuts(keyPair);
 
-			// Clear the mock to ensure we track only this call
 			State.palette.setForegroundColor.mockClear();
 
 			const keyEvent = new KeyboardEvent('keydown', {
@@ -847,9 +928,6 @@ describe('UI Utilities', () => {
 		});
 	});
 
-	// createGrid and createToolPreview need a real canvas context and
-	// State init; E2E covers them.
-
 	describe('createResolutionController', () => {
 		it('should update resolution display on canvas size change', () => {
 			const lbl = document.createElement('span');
@@ -910,7 +988,6 @@ describe('UI Utilities', () => {
 
 	describe('Additional DOM Utilities', () => {
 		it('should provide $$$ function for querySelectorAll', async () => {
-			// Need to import $$$ separately
 			const { $$$ } = await import('../../src/js/client/ui.js');
 
 			const div1 = document.createElement('div');
@@ -926,22 +1003,14 @@ describe('UI Utilities', () => {
 	});
 
 	describe('createGrid', () => {
-		it('should be a function that creates grid controller', async () => {
+		it('starts hidden without a saved preference', async () => {
 			const { createGrid } = await import('../../src/js/client/ui.js');
-
-			expect(typeof createGrid).toBe('function');
-
 			const container = document.createElement('div');
 			document.body.appendChild(container);
 
-			// The function will fail during rendering but we're just verifying the structure
-			expect(() => {
-				try {
-					createGrid(container);
-				} catch {
-					// Expected to fail due to mocking limitations, but we verified it's callable
-				}
-			}).not.toThrow();
+			const grid = createGrid(container);
+			expect(grid.isShown()).toBe(false);
+			expect(container.classList.contains('enabled')).toBe(false);
 		});
 
 		it('restores a saved preference at creation', async () => {
@@ -1110,7 +1179,7 @@ describe('UI Utilities', () => {
 	describe('websocketUI', () => {
 		// the stylesheet gates .includedForWebsocket and
 		// .excludedForWebsocket on one document attribute; inline
-		// display writes lost to the sauce panel's id rule
+		// display writes lose to the sauce panel's id rule
 		it('flips the document attribute both ways', async () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');
 

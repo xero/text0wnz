@@ -7,19 +7,20 @@ import { createHexFontPages } from './hexFontPages.js';
 import {
 	cellFromPoint,
 	clampCell,
-	cp437ToUnicode,
 	createDocV3,
 	createEditorCore,
 	createJournal,
 	createPatchArena,
 	encodeStrokeRecord,
+	extCodepointToCp437,
+	glyphToExtCodepoint,
 	replayJournal,
 	paletteColor,
 	snapOrigin,
-	unicodeToCp437Strict,
 	v3ToU16Lossy,
 } from '../core/index';
 import { createJournalStore } from './journalStore.js';
+import { settlesWithin } from './visibleWait.js';
 import { createPointerInput } from './pointer.js';
 import { isInteractiveZoom } from './zoom.js';
 import magicNumbers from './magicNumbers.js';
@@ -28,14 +29,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	let columns = 80,
 			rows = 25,
 			imageData = new Uint16Array(columns * rows),
-			canvases,
-			redrawing = false,
-			ctxs,
 			blinkOn = false,
 			drawHistory = [],
 			currentFontName = magicNumbers.DEFAULT_FONT,
 			dirtyRegions = [],
-			processingDirtyRegions = false,
 			xbFontData = null,
 			dirtyRegionScheduled = false,
 			activeChunks = new Set();
@@ -49,25 +46,34 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	// doc-level changes and undo/redo write a fresh keyframe.
 	// Collab sessions never journal; the server owns that doc.
 	const journal = createJournalStore();
+	// the ?profile rig stops the journal for its session, or a reload
+	// restores its synthetic docs over the art
+	let journaling = true;
+	const journals = () => journaling && !State.network?.isConnected?.();
 	let keyframeTimer = null;
-	// The first keyframe of a session supersedes whatever the journal
-	// held before (a previous session, a torn tail): strokes may only
-	// replay on top of a keyframe written by THIS session.
-	let sessionKeyframeWritten = false;
 	// Epoch accounting keeps the journal tail honest: every committed
 	// stroke and doc-level change bumps docEpoch; docOpEpoch remembers
-	// the last doc-level change; keyframeEpoch is what the last
-	// COMPLETED rewrite captured. A stroke may only append while
-	// keyframeEpoch >= docOpEpoch, or a crash would replay it against
-	// a baseline missing the resize/ice/frame change it was drawn on.
+	// the last doc-level change; snapshotEpoch is what the newest
+	// keyframe queued in the store captured. A stroke may only append
+	// while snapshotEpoch >= docOpEpoch, or a crash would replay it
+	// against a baseline missing the resize/ice/frame change it was
+	// drawn on. The store appends only onto an unbroken tail behind a
+	// keyframe this session wrote, so a failed write drops the strokes
+	// queued behind it.
 	let docEpoch = 0;
 	let docOpEpoch = 0;
-	let keyframeEpoch = 0;
+	let snapshotEpoch = 0;
 	let keyframeRunning = false;
 	let keyframeQueued = false;
 
 	const writeKeyframe = async () => {
-		if (State.network?.isConnected?.()) {
+		if (!journals()) {
+			return;
+		}
+		if (State.loadingFromStorage) {
+			// the autosave restore has yet to read the journal this
+			// keyframe would overwrite, or to load the doc it reads
+			queueKeyframe(false);
 			return;
 		}
 		if (keyframeRunning) {
@@ -75,26 +81,26 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 		keyframeRunning = true;
-		// strokes landing during the serialize/gzip await bump docEpoch
-		// past this capture; the finally block takes another keyframe so
-		// the rewrite can never clobber an append it did not contain
-		const epoch = docEpoch;
 		try {
-			await journal.rewrite(
-				await createJournal(
+			// createJournal reads the doc before its first await, and the
+			// rewrite takes its store slot in the same tick, so a stroke
+			// committed during the gzip appends behind this keyframe, where
+			// the rewrite cannot clobber it
+			const written = journal.rewrite(
+				createJournal(
 					doc,
 					xbFontData
 						? { fontBytes: xbFontData.bytes, fontHeight: xbFontData.height }
 						: {},
 				),
 			);
-			sessionKeyframeWritten = true;
-			keyframeEpoch = epoch;
+			snapshotEpoch = docEpoch;
+			await written;
 		} catch (error) {
 			console.warn('[Canvas] journal keyframe failed:', error);
 		} finally {
 			keyframeRunning = false;
-			if (keyframeQueued || docEpoch !== epoch) {
+			if (keyframeQueued) {
 				keyframeQueued = false;
 				queueKeyframe(true);
 			}
@@ -119,45 +125,61 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		);
 	};
 
-	// doc-level change (resize, ice, frames, loads, fonts): the tail
-	// goes stale until a fresh keyframe completes. Rare one-shot ops
+	// doc-level change (resize, ice, frames, loads, fonts): no stroke
+	// appends until a fresh keyframe captures it. Rare one-shot ops
 	// pass immediate; spammable ones (undo/redo, delay slider) debounce.
-	const scheduleJournalKeyframe = (immediate = false) => {
+	const markDocOp = () => {
 		docEpoch += 1;
 		docOpEpoch = docEpoch;
+	};
+	const scheduleJournalKeyframe = (immediate = false) => {
+		markDocOp();
 		queueKeyframe(immediate);
+	};
+	// an append queued before a wipe lands ahead of it and is wiped, and
+	// a keyframe it asks for would write the cleared doc back
+	let wipes = 0;
+	// `keyframe` journals the stroke instead when no keyframe in the
+	// store queue holds the last doc-level change: an appended stroke
+	// would replay against that stale baseline
+	const journalStroke = (stroke, keyframe) => {
+		if (snapshotEpoch < docOpEpoch) {
+			keyframe();
+			return;
+		}
+		const wiped = wipes;
+		journal
+			.appendStroke(encodeStrokeRecord(stroke))
+			.then(keyframeDue => {
+				if (keyframeDue && wiped === wipes) {
+					queueKeyframe(false);
+				}
+			})
+			.catch(error => {
+				console.warn('[Canvas] journal append failed:', error);
+				// the store drops strokes until a keyframe lands, and only
+				// a keyframe can hold this one now
+				if (wiped === wipes) {
+					queueKeyframe(false);
+				}
+			});
 	};
 	const arena = createPatchArena({
 		// the label table mirrors the ring so the History flyout can
 		// name and jump to any step
 		onEvict: () => State.historyLabels?.evicted(),
+		onClear: () => State.historyLabels?.cleared(),
 		onCommit: stroke => {
-			State.historyLabels?.committed();
-			if (State.network?.isConnected?.()) {
+			State.historyLabels?.committed(
+				stroke.resize && `Resize ${stroke.resize.to.join('x')}`,
+			);
+			// a resize journals as the keyframe its geometry change
+			// schedules, never as a stroke record
+			if (stroke.resize || !journals()) {
 				return;
 			}
 			docEpoch += 1;
-			if (keyframeEpoch < docOpEpoch) {
-				// a doc-level change has no completed keyframe yet; an
-				// appended stroke would replay against that stale baseline,
-				// so the keyframe captures this stroke instead
-				queueKeyframe(true);
-				return;
-			}
-			if (!sessionKeyframeWritten) {
-				// a rewrite is already pending or due; it captures this
-				// stroke's effect, so appending too stays consistent
-				queueKeyframe(false);
-			}
-			journal
-				.appendStroke(encodeStrokeRecord(stroke))
-				.then(compactionDue => {
-					if (compactionDue) {
-						queueKeyframe(false);
-					}
-				})
-				.catch(error =>
-					console.warn('[Canvas] journal append failed:', error));
+			journalStroke(stroke, () => queueKeyframe(true));
 		},
 	});
 
@@ -186,9 +208,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 						bg: (word >> 4) & 15,
 					},
 					ext: {
-						u:
-							doc.glyphTable.get(glyphId)?.codepoint ??
-							cp437ToUnicode(glyphId & 0xff),
+						u: glyphToExtCodepoint(doc.glyphTable, glyphId),
 						a: (glyphValue >>> 16) & 0xff,
 						fg: frame.fg[index] >>> 0,
 						bg: frame.bg[index] >>> 0,
@@ -213,10 +233,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	});
 	const iceColorsNow = () => doc.getIceColors();
 
-	// ---- frames: onion-skin compose + current-frame mirror ----------
-	// Onion skin is a DATA-level ghost, GL-only (the chunk fallback's u16
-	// mirror always reflects the real frame): blank cells of the current
-	// frame show the previous frame dimmed to 35%, blink stripped.
+	// onion skin is a DATA-level ghost, GL-only: the chunk fallback's
+	// u16 mirror always reflects the real frame
 	let onionSkin = false;
 	/** @type {{glyph: Uint32Array, fg: Uint32Array, bg: Uint32Array} | null} */
 	let onionPlanes = null;
@@ -276,8 +294,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	// Baud preview: reveal the current frame in encoded-byte order at a
-	// chosen line rate; another data-level compose, GL-only.
+	// baud preview: another data-level compose, GL-only
 	/** @type {{glyph: Uint32Array, fg: Uint32Array, bg: Uint32Array} | null} */
 	let baudPlanes = null;
 	let baudReveal = -1;
@@ -339,7 +356,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		redrawEntireImage();
 	};
 
-	/** re-mirror + repaint + tell the UI; fired by editor navigation */
 	const handleFrameChange = frameIndex => {
 		imageData = v3ToU16Lossy(doc, frameIndex).imageData;
 		if (onionSkin) {
@@ -356,20 +372,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const chunkSize = 25,
-				viewportState = {
-					scrollTop: 0,
-					scrollLeft: 0,
-					containerHeight: 0,
-					containerWidth: 0,
-					visibleStartRow: 0,
-					visibleEndRow: 0,
-				},
+				viewportState = { scrollTop: 0, containerHeight: 0 },
 				canvasChunks = new Map();
 
-	// GL is the default renderer. All paint paths delegate to it when
-	// active; the doc model is shared. ?renderer=2d forces the legacy
-	// chunk renderer below, which is also the automatic fallback
-	// wherever webgl2 is unavailable.
+	// paint paths delegate to GL when active over the shared doc model;
+	// the chunk renderer below is the ?renderer=2d and no-webgl2 fallback
 	let glRenderer = null;
 	// unicode glyph pages: created on the first glyph id >= 256, so
 	// classic docs never fetch the manifest or any block
@@ -397,10 +404,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			glRenderer = createGLRenderer(canvasContainer, {
 				getColumns: () => columns,
 				getRows: () => rows,
-				// GL renders the v3 planes directly (tag-bit colors, attr
-				// blink); the u16 mirror stays for the chunk fallback +
-				// collab. Frames: the current frame renders; onion mode
-				// substitutes the composed ghost planes (GL-only)
 				getPlanes: () => {
 					if (baudReveal >= 0 && baudPlanes) {
 						return baudPlanes;
@@ -471,7 +474,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 
 		if (glRenderer) {
-			glRenderer.drawRegion(x, y, w, h);
+			glRenderer.drawRegion(y, h);
 			return;
 		}
 
@@ -484,36 +487,34 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	const processDirtyRegions = () => {
-		if (processingDirtyRegions || dirtyRegions.length === 0) {
+		if (dirtyRegions.length === 0) {
 			return;
 		}
 
-		// Throttle with RAF for smooth rendering
 		if (!dirtyRegionScheduled) {
 			dirtyRegionScheduled = true;
+			// a paint that throws must not leave the flag set, or every
+			// later dirty paint drops; the scroll and resize passes below
+			// follow the same rule
 			requestAnimationFrame(() => {
-				processingDirtyRegions = true;
-				const coalescedRegions = coalesceRegions(dirtyRegions);
-				dirtyRegions = [];
-				for (let i = 0; i < coalescedRegions.length; i++) {
-					const region = coalescedRegions[i];
-					drawRegion(region.x, region.y, region.w, region.h);
+				try {
+					const coalescedRegions = coalesceRegions(dirtyRegions);
+					dirtyRegions = [];
+					for (let i = 0; i < coalescedRegions.length; i++) {
+						const region = coalescedRegions[i];
+						drawRegion(region.x, region.y, region.w, region.h);
+					}
+				} finally {
+					dirtyRegionScheduled = false;
 				}
-				processingDirtyRegions = false;
-				dirtyRegionScheduled = false;
 			});
 		}
 	};
 
 	const redrawGlyph = (index, x, y) => {
-		if (glRenderer) {
-			glRenderer.drawCell(x, y);
-			return;
-		}
 		const chunkIndex = Math.floor(y / chunkSize);
 		const chunk = canvasChunks.get(chunkIndex);
 		if (!chunk || !activeChunks.has(chunkIndex)) {
-			// Chunk not visible, skip rendering but mark as dirty if it exists
 			if (chunk) {
 				chunk.rendered = false;
 			}
@@ -522,14 +523,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		redrawGlyphInChunk(index, x, y, chunk);
 	};
 
-	const redrawEntireImage = (onProgress, onComplete) => {
+	const redrawEntireImage = onComplete => {
 		if (glRenderer) {
-			// Coverage repaints are sub-frame; progressive pacing collapses
-			// to one paint with the same completion contract
-			glRenderer.redraw(onProgress, onComplete);
+			glRenderer.redraw(onComplete);
 			return;
 		}
-		// For small canvases, direct render is fine
 		if (rows * columns < 5000) {
 			drawRegion(0, 0, columns, rows);
 			if (onComplete) {
@@ -542,50 +540,32 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		let batchSize;
 
 		if (totalCells < 10000) {
-			batchSize = 10; // Small: 10 rows per frame
+			batchSize = 10;
 		} else if (totalCells < 50000) {
-			batchSize = 5; // Medium: 5 rows per frame
+			batchSize = 5;
 		} else {
-			batchSize = 3; // Large: 3 rows per frame
+			batchSize = 3;
 		}
-		progressiveRedraw(0, batchSize, rows, onProgress, onComplete);
+		progressiveRedraw(0, batchSize, rows, onComplete);
 	};
 
-	const progressiveRedraw = (
-		startRow,
-		batchSize,
-		totalRows,
-		onProgress,
-		onComplete,
-	) => {
+	const progressiveRedraw = (startRow, batchSize, totalRows, onComplete) => {
 		const frameStart = performance.now();
-		const endRow = Math.min(startRow + batchSize, totalRows || rows);
+		const endRow = Math.min(startRow + batchSize, totalRows);
 
 		drawRegion(0, startRow, columns, endRow - startRow);
 
-		if (onProgress) {
-			const progress = (endRow / (totalRows || rows)) * 100;
-			onProgress(progress);
-		}
-
-		if (endRow < (totalRows || rows)) {
+		if (endRow < totalRows) {
 			requestAnimationFrame(() => {
 				const frameTime = performance.now() - frameStart;
 				let nextBatchSize = batchSize;
 
-				// Adjust batch size to maintain snappy fps
 				if (frameTime < 10) {
 					nextBatchSize = Math.min(batchSize * 2, 25);
 				} else if (frameTime > 16) {
 					nextBatchSize = Math.max(Math.floor(batchSize / 2), 1);
 				}
-				progressiveRedraw(
-					endRow,
-					nextBatchSize,
-					totalRows,
-					onProgress,
-					onComplete,
-				);
+				progressiveRedraw(endRow, nextBatchSize, totalRows, onComplete);
 			});
 		} else {
 			if (onComplete) {
@@ -600,7 +580,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return regions;
 		}
 
-		const gridCellSize = 10; // 10x10 cells
+		const gridCellSize = 10;
 		const gridWidth = Math.ceil(columns / gridCellSize);
 		const gridHeight = Math.ceil(rows / gridCellSize);
 		const grid = Array(gridHeight)
@@ -683,7 +663,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	let blinkStop = false;
 
 	const blink = () => {
-		// Only blink active (visible) chunks
 		blinkOn = !blinkOn;
 
 		activeChunks.forEach(chunkIndex => {
@@ -721,10 +700,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	// each update chains ONE starter onto the prior loop's promise, so
 	// at most one loop ever runs; the generation token lets stops and
-	// rapid restarts cancel queued starters instead of stacking waiters
-	// (the old lifetime-held mutex grew one starved waiter per open,
-	// font change, resize, and zoom, and a bare stop handed the lock to
-	// a stale waiter that restarted blink mid-relayout)
+	// rapid restarts cancel queued starters, so waiters never pile up
+	// per open/font/resize/zoom and a stale one never restarts blink
+	// mid-relayout
 	let blinkGen = 0;
 	let blinkLoopTail = Promise.resolve();
 
@@ -769,13 +747,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const viewportElement = document.getElementById('viewport');
 		if (!viewportElement) {
 			console.warn('[Canvas] #viewport not found, rendering all chunks');
-			return {
-				startChunk: 0,
-				endChunk: totalChunks - 1,
-				totalChunks,
-				visibleStartRow: 0,
-				visibleEndRow: rows,
-			};
+			return { startChunk: 0, endChunk: totalChunks - 1 };
 		}
 
 		const viewportHeight = viewportElement.clientHeight || window.innerHeight;
@@ -796,13 +768,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			Math.floor(bufferedBottom / (chunkSize * fontHeight)),
 		);
 
-		return {
-			startChunk,
-			endChunk,
-			totalChunks,
-			visibleStartRow: Math.floor(viewportTop / fontHeight),
-			visibleEndRow: Math.ceil(viewportBottom / fontHeight),
-		};
+		return { startChunk, endChunk };
 	};
 
 	const updateViewportState = () => {
@@ -813,23 +779,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 
 		viewportState.scrollTop = viewportElement.scrollTop;
-		viewportState.scrollLeft = viewportElement.scrollLeft;
 		viewportState.containerHeight = viewportElement.clientHeight;
-		viewportState.containerWidth = viewportElement.clientWidth;
-
-		const fontHeight =
-			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
-		viewportState.visibleStartRow = Math.floor(
-			viewportState.scrollTop / fontHeight,
-		);
-		viewportState.visibleEndRow = Math.min(
-			rows,
-			Math.ceil(
-				(viewportState.scrollTop + viewportState.containerHeight) / fontHeight,
-			),
-		);
 	};
 
+	let contextRefused = false;
 	const getOrCreateCanvasChunk = chunkIndex => {
 		if (canvasChunks.has(chunkIndex)) {
 			return canvasChunks.get(chunkIndex);
@@ -846,8 +799,19 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const canvasWidth = fontWidth * columns;
 		const canvasHeight = fontHeight * chunkHeight;
 
-		// Create main canvas with a background color to avoid flash
+		// black backing avoids a flash before the chunk paints
 		const canvas = createCanvas(canvasWidth, canvasHeight);
+		const ctx = canvas.getContext('2d');
+		if (!ctx) {
+			// iOS Safari refuses a context past its canvas memory budget. A
+			// chunk cached without one throws from every later paint; left
+			// uncached, the next pass asks again once eviction frees memory
+			if (!contextRefused) {
+				contextRefused = true;
+				console.warn('[Canvas] the browser refused a 2D context for a chunk');
+			}
+			return null;
+		}
 		canvas.style.position = 'absolute';
 		canvas.style.top = chunkStartRow * fontHeight + 'px';
 		canvas.style.left = '0px';
@@ -855,9 +819,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		const chunk = {
 			canvas: canvas,
-			ctx: canvas.getContext('2d'),
+			ctx: ctx,
 			rendered: false,
-			chunkIndex: chunkIndex,
 			startRow: chunkStartRow,
 			endRow: chunkEndRow,
 			blinkCells: new Set(),
@@ -867,38 +830,27 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return chunk;
 	};
 
-	/** async batches the initial render via RAF */
-	const renderChunk = (chunk, async = false) => {
+	const renderChunk = chunk => {
 		if (!chunk) {
 			return;
 		}
+		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
+		const fontHeight =
+			State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
+		const { startRow, endRow, ctx } = chunk;
+		const chunkHeight = (endRow - startRow) * fontHeight;
+		const canvasWidth = fontWidth * columns;
 
-		const doRender = () => {
-			const fontWidth =
-				State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
-			const fontHeight =
-				State.font.getHeight() || magicNumbers.DEFAULT_FONT_HEIGHT;
-			const { startRow, endRow, ctx } = chunk;
-			const chunkHeight = (endRow - startRow) * fontHeight;
-			const canvasWidth = fontWidth * columns;
+		ctx.clearRect(0, 0, canvasWidth, chunkHeight);
+		chunk.blinkCells.clear();
 
-			ctx.clearRect(0, 0, canvasWidth, chunkHeight);
-			chunk.blinkCells.clear();
-
-			for (let y = startRow; y < endRow; y++) {
-				for (let x = 0; x < columns; x++) {
-					const index = y * columns + x;
-					redrawGlyphInChunk(index, x, y, chunk);
-				}
+		for (let y = startRow; y < endRow; y++) {
+			for (let x = 0; x < columns; x++) {
+				const index = y * columns + x;
+				redrawGlyphInChunk(index, x, y, chunk);
 			}
-			chunk.rendered = true;
-		};
-
-		if (async) {
-			requestAnimationFrame(doRender);
-		} else {
-			doRender();
 		}
+		chunk.rendered = true;
 	};
 
 	const redrawGlyphInChunk = (index, x, y, chunk) => {
@@ -926,20 +878,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			} else {
 				State.font.draw(charCode, foreground, background, chunk.ctx, x, localY);
 				chunk.blinkCells.delete(index);
-			}
-		}
-	};
-
-	const updateLegacyArrays = () => {
-		canvases = [];
-		ctxs = [];
-
-		const totalChunks = Math.ceil(rows / chunkSize);
-		for (let i = 0; i < totalChunks; i++) {
-			const chunk = canvasChunks.get(i);
-			if (chunk) {
-				canvases.push(chunk.canvas);
-				ctxs.push(chunk.ctx);
 			}
 		}
 	};
@@ -984,11 +922,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		});
 
 		for (let chunkIndex = startChunk; chunkIndex <= endChunk; chunkIndex++) {
-			newActiveChunks.add(chunkIndex);
-			let chunk = canvasChunks.get(chunkIndex);
+			const chunk = getOrCreateCanvasChunk(chunkIndex);
 			if (!chunk) {
-				chunk = getOrCreateCanvasChunk(chunkIndex);
+				continue;
 			}
+			newActiveChunks.add(chunkIndex);
 			if (!chunk.canvas.parentNode) {
 				canvasContainer.appendChild(chunk.canvas);
 			}
@@ -997,7 +935,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			}
 		}
 		activeChunks = newActiveChunks;
-		updateLegacyArrays();
 	};
 
 	// trailing throttle: a scroll during the RAF pass schedules one more
@@ -1007,20 +944,21 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const handleScroll = () => {
 		if (scrollScheduled) {
 			// only a scroll landing DURING the pass earns a trailing one;
-			// setting the flag unconditionally made the tail call re-arm
-			// itself and the loop ran every frame until the page closed
+			// flagging unconditionally would let the tail call re-arm
+			// itself every frame until the page closes
 			pendingScrollUpdate = true;
 			return;
 		}
 
 		scrollScheduled = true;
 		requestAnimationFrame(() => {
-			updateViewportState();
-			renderVisibleChunks();
+			try {
+				updateViewportState();
+				renderVisibleChunks();
+			} finally {
+				scrollScheduled = false;
+			}
 
-			scrollScheduled = false;
-
-			// If more scroll events came in, schedule another update
 			if (pendingScrollUpdate) {
 				pendingScrollUpdate = false;
 				handleScroll();
@@ -1035,9 +973,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 		resizeScheduled = true;
 		requestAnimationFrame(() => {
-			updateViewportState();
-			renderVisibleChunks();
-			resizeScheduled = false;
+			try {
+				updateViewportState();
+				renderVisibleChunks();
+			} finally {
+				resizeScheduled = false;
+			}
 		});
 	};
 
@@ -1049,7 +990,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			);
 			return;
 		}
-		// Remove existing listeners to avoid duplicates
 		viewportElement.removeEventListener('scroll', handleScroll);
 		window.removeEventListener('resize', handleResize);
 		viewportElement.addEventListener('scroll', handleScroll, { passive: true });
@@ -1062,14 +1002,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 		if (glRenderer) {
-			// Geometry/font/palette changed: atlas + layout rebuild, sub-frame
-			redrawing = true;
 			glRenderer.rebuild();
-			redrawing = false;
 			updateTimer();
 			return;
 		}
-		redrawing = true;
 
 		canvasChunks.forEach(chunk => {
 			if (chunk.canvas && chunk.canvas.parentNode) {
@@ -1079,9 +1015,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 		canvasChunks.clear();
 		activeChunks.clear();
-
-		canvases = [];
-		ctxs = [];
 
 		const fontWidth = State.font.getWidth() || magicNumbers.DEFAULT_FONT_WIDTH;
 		const fontHeight =
@@ -1108,14 +1041,15 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			endChunk + visibleChunkCount * 4,
 		);
 
-		// Create and render visible chunks + pre-rendered buffer below
 		for (
 			let chunkIndex = startChunk;
 			chunkIndex <= preRenderEndChunk;
 			chunkIndex++
 		) {
 			const chunk = getOrCreateCanvasChunk(chunkIndex);
-			// Only attach visible chunks to DOM
+			if (!chunk) {
+				continue;
+			}
 			if (chunkIndex <= endChunk) {
 				canvasContainer.appendChild(chunk.canvas);
 				activeChunks.add(chunkIndex);
@@ -1124,9 +1058,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 				renderChunk(chunk);
 			}
 		}
-		updateLegacyArrays();
 		initViewportListeners();
-		redrawing = false;
 		stopBlinkTimer();
 		updateTimer();
 	};
@@ -1143,122 +1075,100 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	// stillWanted lets a racing caller disown the swap after the async
-	// font load: a superseded file open must not restyle the document
-	// that beat it
-	const setFont = async (fontName, callback, scaleFactor, stillWanted) => {
+	// a load that never settles would hold every later font change, and
+	// every collab frame waiting on one, behind it in the queue. The boot
+	// load waits it out instead: nothing queues behind it yet, and past
+	// the wait the editor would start with no font at all
+	const FONT_LOAD_TIMEOUT_MS = 10000;
+	const bounded = async load => {
+		if (!State.font || (await settlesWithin(load, FONT_LOAD_TIMEOUT_MS))) {
+			return load;
+		}
+		// the load runs on past the wait, and the font it may still build
+		// is one nobody installs
+		load.then(
+			font => font.dispose(),
+			() => {},
+		);
+		throw new Error('font load timed out');
+	};
+	let fontQueue = Promise.resolve();
+
+	// stillWanted lets a racing caller disown the swap: a superseded file
+	// open must not restyle the document that beat it
+	const swapFont = async (fontName, callback, scaleFactor, stillWanted) => {
+		if (stillWanted && !stillWanted()) {
+			return;
+		}
+		const effectiveScaleFactor =
+			scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
+		const loadImage = (name, spacing) =>
+			bounded(
+				loadFontFromImage(name, spacing, State.palette, effectiveScaleFactor),
+			);
+		const install = (font, name, carrySpacing) => {
+			if (stillWanted && !stillWanted()) {
+				font.dispose();
+				return;
+			}
+			// the spacing and palette as they stand at install, not as the
+			// load began, or a 9px toggle or palette swap made during it
+			// is lost. The new handle goes live first so spacing
+			// listeners relayout against it
+			const spacing = State.font ? State.font.getLetterSpacing() : false;
+			font.setPalette?.(State.palette);
+			State.font = font;
+			// set here, not as a load parses, so a load that times out
+			// or a font picker preview never resizes the brush chips and
+			// glyph previews away from the live font
+			const glyphs = font.getData();
+			State.fontWidth = glyphs.width;
+			State.fontHeight = glyphs.height;
+			currentFontName = name;
+			if (carrySpacing && spacing !== font.getLetterSpacing()) {
+				font.setLetterSpacing(spacing);
+			}
+			createCanvases();
+			updateTimer();
+			redrawEntireImage();
+			document.dispatchEvent(
+				new CustomEvent('onFontChange', { detail: name }),
+			);
+			if (callback) {
+				callback();
+			}
+		};
 		try {
-			const effectiveScaleFactor =
-				scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
-
 			if (fontName === 'XBIN' && xbFontData) {
-				const font = await loadFontFromXBData(
-					xbFontData.bytes,
-					xbFontData.width,
-					xbFontData.height,
-					xbFontData.letterSpacing,
-					State.palette,
-					effectiveScaleFactor,
+				const font = await bounded(
+					loadFontFromXBData(
+						xbFontData.bytes,
+						xbFontData.width,
+						xbFontData.height,
+						false, // SAUCE §FileType: XBin flags are 0, no LS
+						State.palette,
+						effectiveScaleFactor,
+					),
 				);
-				if (stillWanted && !stillWanted()) {
-					return;
-				}
-				State.font = font;
-				currentFontName = fontName;
-
-				createCanvases();
-				updateTimer();
-				redrawEntireImage();
-				document.dispatchEvent(
-					new CustomEvent('onFontChange', { detail: fontName }),
-				);
-
-				if (callback) {
-					callback();
-				}
-			} else if (fontName === 'XBIN' && !xbFontData) {
+				install(font, fontName, false);
+			} else if (fontName === 'XBIN') {
 				console.warn(
 					`[Canvas] XBIN selected but no embedded font data available, falling back to: ${magicNumbers.DEFAULT_FONT}`,
 				);
-
-				const fallbackFont = magicNumbers.DEFAULT_FONT;
-				const font = await loadFontFromImage(
-					fallbackFont,
-					false,
-					State.palette,
-					effectiveScaleFactor,
-				);
-				if (stillWanted && !stillWanted()) {
-					return;
-				}
-				State.font = font;
-				currentFontName = fallbackFont;
-
-				createCanvases();
-				updateTimer();
-				redrawEntireImage();
-				document.dispatchEvent(
-					new CustomEvent('onFontChange', { detail: fallbackFont }),
-				);
-
-				if (callback) {
-					callback();
-				}
+				const font = await loadImage(magicNumbers.DEFAULT_FONT, false);
+				install(font, magicNumbers.DEFAULT_FONT, false);
 			} else {
-				const spacing = State.font ? State.font.getLetterSpacing() : false;
-				const font = await loadFontFromImage(
+				const font = await loadImage(
 					fontName,
-					spacing,
-					State.palette,
-					effectiveScaleFactor,
+					State.font ? State.font.getLetterSpacing() : false,
 				);
-				if (stillWanted && !stillWanted()) {
-					return;
-				}
-				State.font = font;
-				currentFontName = fontName;
-
-				createCanvases();
-				updateTimer();
-				redrawEntireImage();
-				document.dispatchEvent(
-					new CustomEvent('onFontChange', { detail: fontName }),
-				);
-
-				if (callback) {
-					callback();
-				}
+				install(font, fontName, true);
 			}
 		} catch (error) {
 			console.error('[Canvas] Failed to load font:', error);
-
-			const effectiveScaleFactor =
-				scaleFactor ?? State.font?.getScaleFactor?.() ?? 1;
-
-			const fallbackFont = magicNumbers.DEFAULT_FONT;
 			try {
-				const font = await loadFontFromImage(
-					fallbackFont,
-					false,
-					State.palette,
-					effectiveScaleFactor,
-				);
-				if (stillWanted && !stillWanted()) {
-					return;
-				}
-				State.font = font;
-				currentFontName = fallbackFont;
-
-				createCanvases();
-				updateTimer();
-				redrawEntireImage();
-				document.dispatchEvent(
-					new CustomEvent('onFontChange', { detail: fallbackFont }),
-				);
-
-				if (callback) {
-					callback();
-				}
+				const font = await loadImage(magicNumbers.DEFAULT_FONT, false);
+				install(font, magicNumbers.DEFAULT_FONT, false);
 			} catch (fallbackError) {
 				console.error('[Canvas] Failed to load fallback font:', fallbackError);
 				// the previous font is still live, so the caller's flow
@@ -1271,29 +1181,49 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	const resize = (newColumnValue, newRowValue) => {
+	// loads install in call order, so the last call wins and a slow load
+	// never lands over a newer font. Callbacks run unawaited: one that
+	// waited on a later setFont would deadlock the queue
+	const setFont = (fontName, callback, scaleFactor, stillWanted) => {
+		const run = fontQueue.then(() =>
+			swapFont(fontName, callback, scaleFactor, stillWanted));
+		fontQueue = run.catch(() => {});
+		return run;
+	};
+
+	// everything sized by the doc follows a geometry change: a resize,
+	// or an undo or redo of one
+	const adoptDocSize = () => {
+		columns = doc.getColumns();
+		rows = doc.getRows();
+		// LOSSY projection, current frame: the strict one throws on
+		// unicode glyphs and RGB words, and the mirror is lossy by
+		// contract
+		imageData = v3ToU16Lossy(doc, editor.getCurrentFrame()).imageData;
+		if (onionSkin) {
+			rebuildOnionPlanes();
+		}
+		scheduleJournalKeyframe(true);
+		createCanvases();
+		updateTimer();
+		redrawEntireImage();
+		document.dispatchEvent(
+			new CustomEvent('onTextCanvasSizeChange', { detail: { columns: columns, rows: rows } }),
+		);
+	};
+
+	/**
+	 * A local resize is one undo step. A peer's resize passes
+	 * `{ undoable: false }`, which clears the history instead.
+	 */
+	const resize = (newColumnValue, newRowValue, { undoable = true } = {}) => {
 		if (
 			(newColumnValue !== columns || newRowValue !== rows) &&
 			newColumnValue > 0 &&
 			newRowValue > 0
 		) {
-			editor.resize(newColumnValue, newRowValue);
-			columns = newColumnValue;
-			rows = newRowValue;
-			// LOSSY projection, current frame: the strict one throws on
-			// unicode glyphs and RGB words, and the mirror is lossy by
-			// contract
-			imageData = v3ToU16Lossy(doc, editor.getCurrentFrame()).imageData;
-			if (onionSkin) {
-				rebuildOnionPlanes();
-			}
-			scheduleJournalKeyframe(true);
-			createCanvases();
-			updateTimer();
-			redrawEntireImage();
-			document.dispatchEvent(
-				new CustomEvent('onTextCanvasSizeChange', { detail: { columns: columns, rows: rows } }),
-			);
+			editor.resize(newColumnValue, newRowValue, { undoable });
+			adoptDocSize();
 		}
 	};
 
@@ -1309,7 +1239,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			updateTimer();
 			redrawEntireImage();
 			// the autosave listens for this; without it an ice toggle on
-			// an otherwise untouched doc reverted on reload
+			// an otherwise untouched doc would revert on reload
 			document.dispatchEvent(
 				new CustomEvent('onIceColorsChange', { detail: newIceColors }),
 			);
@@ -1328,48 +1258,43 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return;
 		}
 		criticalRunning = true;
-		// collapse every same-task trigger (e.g. letter spacing + zoom
-		// set back to back) into ONE relayout at the final metrics
-		await Promise.resolve();
-		const waitForRedrawing = () =>
-			new Promise(resolve => {
-				// Fast path: don't pay a 50ms poll tick when already idle
-				if (!redrawing) {
-					resolve();
-					return;
+		let veiled = false;
+		try {
+			// collapse every same-task trigger (e.g. letter spacing + zoom
+			// set back to back) into ONE relayout at the final metrics
+			await Promise.resolve();
+			do {
+				criticalDirty = false;
+				// continuous zoom (pinch, wheel) relayouts every frame on GL;
+				// flashing the settings modal per frame would be unusable. A
+				// peer's change relayouts too, and the veil must not replace
+				// a modal the user has open, nor close one another flow opened
+				if (!veiled && !isInteractiveZoom() && !State.modal.current?.()) {
+					State.modal.loading('Updating editor with new settings...');
+					veiled = true;
 				}
-				const intervalId = setInterval(() => {
-					if (!redrawing) {
-						clearInterval(intervalId);
-						resolve();
-					}
-				}, 50);
-			});
-		do {
-			criticalDirty = false;
-			// continuous zoom (pinch, wheel) relayouts every frame on GL;
-			// flashing the settings modal per frame would be unusable
-			const interactive = isInteractiveZoom();
-			if (!interactive) {
-				State.modal.loading('Updating editor with new settings...');
+				stopBlinkTimer();
+				createCanvases();
+				// the zoom controller corrects scroll for focal anchoring once
+				// the container has its new size
+				document.dispatchEvent(new CustomEvent('onCanvasLayoutChange', {}));
+				await new Promise(resolve => redrawEntireImage(resolve));
+			} while (criticalDirty);
+		} catch (error) {
+			// no retry: a throw that repeats would loop, and the next
+			// settings change relayouts afresh
+			console.error('[Canvas] relayout failed:', error);
+		} finally {
+			criticalRunning = false;
+			updateTimer();
+			if (
+				veiled &&
+				!State.loadingFromStorage &&
+				State.modal.current?.() === 'loading'
+			) {
+				State.modal.close();
 			}
-			stopBlinkTimer();
-			await waitForRedrawing();
-			createCanvases();
-			// the zoom controller corrects scroll for focal anchoring once
-			// the container has its new size
-			document.dispatchEvent(new CustomEvent('onCanvasLayoutChange', {}));
-			await new Promise(resolve => {
-				redrawEntireImage(null, () => {
-					updateTimer();
-					if (!interactive && !State.loadingFromStorage) {
-						State.modal.close();
-					}
-					resolve();
-				});
-			});
-		} while (criticalDirty);
-		criticalRunning = false;
+		}
 	};
 
 	const getImage = () => {
@@ -1385,7 +1310,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		const wasBlinkOn = blinkOn;
 		blinkOn = false;
 
-		// Ensure all chunks exist and are rendered for export
 		const totalChunks = Math.ceil(rows / chunkSize);
 
 		for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
@@ -1395,10 +1319,9 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			}
 			// ALWAYS re-render under the pinned phase: an already-rendered
 			// chunk still wears whatever phase the 500ms tick last painted,
-			// so about half of all exports dropped their blink glyphs (the
-			// live view self-heals on the next tick)
+			// so about half of all exports would drop their blink glyphs
+			// (the live view self-heals on the next tick)
 			renderChunk(chunk);
-			chunk.rendered = true;
 			const yPosition = chunkIndex * chunkSize * fontHeight;
 			ctx.drawImage(chunk.canvas, 0, yPosition);
 		}
@@ -1432,7 +1355,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			// same pinned-phase re-render as getImage: a rendered chunk
 			// wears the tick's last phase otherwise
 			renderChunk(chunk);
-			chunk.rendered = true;
 			const chunkData = chunk.ctx.getImageData(
 				0,
 				0,
@@ -1455,8 +1377,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		newRowValue,
 		newImageData,
 		newIceColors,
-		newLetterSpacing,
-		onProgress,
 		onComplete,
 	) => {
 		editor.loadU16(newImageData, newColumnValue, newRowValue, newIceColors);
@@ -1465,19 +1385,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		doc.setLetterSpacing(State.font ? State.font.getLetterSpacing() : false);
 		columns = newColumnValue;
 		rows = newRowValue;
-		// Adopt the caller's array as the mirror
 		imageData = newImageData;
-		if (typeof newLetterSpacing === 'boolean') {
-			// the SAUCE 9px flag gets its own parameter: it used to ride
-			// the onProgress slot, where a truthy flag was CALLED as a
-			// function mid-redraw and aborted the open
-			State.font.setLetterSpacing(newLetterSpacing);
-		}
 		scheduleJournalKeyframe(true);
 		createCanvases();
 		updateTimer();
 
-		redrawEntireImage(onProgress, () => {
+		redrawEntireImage(() => {
 			document.dispatchEvent(new CustomEvent('onOpenedFile'));
 			if (onComplete) {
 				onComplete();
@@ -1486,8 +1399,8 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	};
 
 	/**
-	 * Plane-native load for tnd/dur/envelope docs (content the u16 path
-	 * cannot carry). The mirror becomes the lossy projection - the chunk
+	 * Plane-native load for every file open, which keeps content the u16
+	 * path cannot carry. The mirror becomes the lossy projection - the chunk
 	 * fallback, collab packets, and the tools' classic16 reads quantize -
 	 * while the GL renderer shows the planes faithfully.
 	 */
@@ -1510,7 +1423,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		if (onionSkin) {
 			rebuildOnionPlanes();
 		}
-		redrawEntireImage(null, () => {
+		redrawEntireImage(() => {
 			document.dispatchEvent(new CustomEvent('onOpenedFile'));
 			// the frame count may have changed (.dur / envelope imports)
 			document.dispatchEvent(
@@ -1534,16 +1447,16 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		return rows;
 	};
 
-	// --- document mutations live in the v3 editor core -------------------
-	// (cell algebra: src/js/core/cellops.ts; stroke/undo: core/editor.ts;
-	// identity vs the frozen v2 reference pinned by engineParity.test.js)
+	// document mutations live in the v3 editor core (cell algebra:
+	// core/cellops.ts; stroke/undo: core/editor.ts), pinned against the
+	// frozen v2 reference by engineParity.test.js
 
 	const clear = () => {
-		State.title = '';
+		State.title = 'Untitled';
 		editor.clear(); // blank planes, history gone, ice back to default
 		imageData = new Uint16Array(columns * rows);
 		scheduleJournalKeyframe(true);
-		updateTimer(); // Restart blink timer if needed
+		updateTimer();
 		redrawEntireImage();
 	};
 
@@ -1555,22 +1468,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 
 	const getMirrorMode = () => {
 		return editor.getMirrorMode();
-	};
-
-	/**
-	 * Single-cell write shim kept only for the exported surface. Writes
-	 * without joining an undo group, mirroring none.
-	 */
-	const patchBufferAndEnqueueDirty = (
-		index,
-		charCode,
-		foreground,
-		background,
-		x,
-		y,
-		_addToUndo = true,
-	) => {
-		editor.quickDrawU16([[index, ((charCode & 0xff) << 8) | ((background & 15) << 4) | (foreground & 15), x, y]]);
 	};
 
 	const getBlock = (x, y) => editor.getBlock(x, y);
@@ -1625,23 +1522,41 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		drawHistory = [];
 	};
 
+	const afterHistoryStep = () => {
+		if (doc.getColumns() !== columns || doc.getRows() !== rows) {
+			// peers resize before the restored cells arrive, or they drop
+			// them as out of bounds
+			State.network?.sendResize?.(doc.getColumns(), doc.getRows());
+			adoptDocSize();
+		} else {
+			scheduleJournalKeyframe();
+		}
+		processDirtyRegions();
+		sendDrawHistory();
+		State.saveToLocalStorage();
+	};
+
 	const undo = () => {
+		// a floating move lands before undo takes it back, or the next
+		// step stamps the block beside the restored origin
+		if (State.selectionTool?.isMoveMode?.()) {
+			State.selectionTool.toggleMoveMode();
+		}
 		if (editor.undo()) {
 			State.historyLabels?.undone();
-			processDirtyRegions();
-			sendDrawHistory();
-			scheduleJournalKeyframe();
-			State.saveToLocalStorage();
+			afterHistoryStep();
 		}
 	};
 
 	const redo = () => {
 		if (editor.redo()) {
+			// only a move that has not stepped yet can meet a redo, and
+			// its block copy predates it
+			if (State.selectionTool?.isMoveMode?.()) {
+				State.selectionTool.toggleMoveMode();
+			}
 			State.historyLabels?.redone();
-			processDirtyRegions();
-			sendDrawHistory();
-			scheduleJournalKeyframe();
-			State.saveToLocalStorage();
+			afterHistoryStep();
 		}
 	};
 
@@ -1660,22 +1575,99 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		editor.endUndo();
 	};
 
+	// the restore prefers the journal over the u16 snapshot main.js
+	// saves 300ms after an edit, so the last edit reaches the journal on
+	// that same idle or a reload drops it
+	let idleCommit = null;
+	let pressed = false;
+	document.addEventListener('onTextCanvasDown', () => {
+		pressed = true;
+	});
+	document.addEventListener('onTextCanvasUp', () => {
+		pressed = false;
+	});
+	// a held press and a floating selection move each build one undo
+	// step across pauses, and a commit before they end would split it.
+	// A provisional record journals the open step instead: its writes so
+	// far, frozen as a commit would freeze them, with the stroke left
+	// open. Replay applies after values in order, and the record the
+	// commit appends later carries every touched cell's final value, so
+	// it lands over the provisionals. It encodes in the same task, where
+	// a keyframe's gzip would let an unloading page go first
+	const stepOpen = () => pressed || State.selectionTool?.isMoveMode?.();
+	// one record per burst of writes, not one per re-poll or hide
+	let stepJournaled = false;
+	const journalOpenStep = () => {
+		if (stepJournaled || !journals()) {
+			return;
+		}
+		const stroke = arena.peekStroke();
+		if (stroke) {
+			stepJournaled = true;
+			// no timer: a hidden tab throttles them, and an unload outruns
+			// them
+			journalStroke(stroke, writeKeyframe);
+		}
+	};
+	const pollIdle = () => {
+		clearTimeout(idleCommit);
+		idleCommit = setTimeout(() => {
+			if (!stepOpen()) {
+				endUndo();
+				return;
+			}
+			journalOpenStep();
+			pollIdle();
+		}, 300);
+	};
+	// every write path calls this, so the open step journals again only
+	// once it has changed
+	const commitWhenIdle = () => {
+		stepJournaled = false;
+		pollIdle();
+	};
+	// a page leaving inside the idle window journals its last edit
+	// before it goes; hidden is the last event a mobile tab is sure to
+	// get, and a hidden tab throttles the idle timer and the keyframe
+	// debounce alike, so a keyframe still waiting writes on the spot
+	const commitOnLeave = () => {
+		if (stepOpen()) {
+			journalOpenStep();
+		} else {
+			endUndo();
+		}
+		if (keyframeTimer !== null) {
+			clearTimeout(keyframeTimer);
+			keyframeTimer = null;
+			writeKeyframe();
+		}
+	};
+	window.addEventListener('pagehide', commitOnLeave);
+	document.addEventListener('visibilitychange', () => {
+		if (document.hidden) {
+			commitOnLeave();
+		}
+	});
+
 	const drawEntryPoint = (callback, optimise) => {
 		editor.drawBlocks(callback, optimise);
 		processDirtyRegions();
 		sendDrawHistory();
+		commitWhenIdle();
 	};
 
 	const drawHalfBlockEntryPoint = callback => {
 		editor.drawHalfBlocks(callback);
 		processDirtyRegions();
 		sendDrawHistory();
+		commitWhenIdle();
 	};
 
 	const deleteArea = (x, y, width, height, background) => {
 		editor.deleteArea(x, y, width, height, background);
 		processDirtyRegions();
 		sendDrawHistory();
+		commitWhenIdle();
 	};
 
 	// plane-native area ops: selection move and the clipboard rearrange
@@ -1689,12 +1681,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		editor.setAreaCells(area, x, y);
 		processDirtyRegions();
 		sendDrawHistory();
+		commitWhenIdle();
 	};
 
-	// ---- frames API (timeline UI drives these) ----------------------
-	// Collab sessions are single-frame by policy: no frame op exists in
+	// collab sessions are single-frame by policy: no frame op exists in
 	// the protocol, so navigation and structure changes refuse while
-	// connected (the timeline UI says why).
+	// connected
 	const framesLocked = () => State.network?.isConnected?.() === true;
 
 	const setCurrentFrame = index => {
@@ -1763,7 +1755,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const drawRemoteExtCells = async cells => {
 		const unresolved = new Set();
 		for (const cell of cells) {
-			if (unicodeToCp437Strict(cell.u) === undefined) {
+			if (extCodepointToCp437(cell.u) === undefined) {
 				unresolved.add(cell.u);
 			}
 		}
@@ -1785,7 +1777,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			) {
 				continue;
 			}
-			const byte = unicodeToCp437Strict(cell.u);
+			const byte = extCodepointToCp437(cell.u);
 			const glyphId = byte !== undefined ? byte : (resolved.get(cell.u) ?? 63);
 			writes.push({
 				index: cell.y * columns + cell.x,
@@ -1845,7 +1837,7 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			);
 			return;
 		}
-		// Convert XB palette (6-bit RGB values)
+		// XB palette channels are 6-bit
 		const rgb6BitPalette = [];
 		for (let i = 0; i < 16; i++) {
 			const offset = i * 3;
@@ -1872,7 +1864,10 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const clearXBData = callback => {
 		xbFontData = null;
 		ensureHexPages().setEmbeddedFont(null, 0);
-		scheduleJournalKeyframe(true);
+		// every caller clears or loads the doc next, and that keyframe
+		// holds this change; one taken here would put the old art back
+		// into a journal New just wiped
+		markDocOp();
 		State.palette = createDefaultPalette();
 		// rebind BEFORE the dispatch so listeners repaint with glyphs in
 		// the restored palette, not the XB one the handle had pinned
@@ -1894,12 +1889,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 			return null;
 		}
 
-		// Convert current palette to XB format (6-bit RGB values)
+		// XB palette channels are 6-bit
 		const paletteBytes = new Uint8Array(48);
 		for (let i = 0; i < 16; i++) {
 			const rgba = State.palette.getRGBAColor(i);
 			const offset = i * 3;
-			// Convert and clamp 8-bit to 6-bit RGB values
 			paletteBytes[offset] = Math.min(rgba[0] >> 2, 63);
 			paletteBytes[offset + 1] = Math.min(rgba[1] >> 2, 63);
 			paletteBytes[offset + 2] = Math.min(rgba[2] >> 2, 63);
@@ -1910,18 +1904,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	const getXBFontData = () => xbFontData;
 
 	/**
-	 * Undo persists in the OPFS journal only. Legacy IndexedDB autosaves
-	 * restore their content; their undo stacks are deliberately dropped
-	 * (see core/migrate.ts).
-	 */
-	/**
-	 * Restore source for state.js: replay the autosave journal and hand
-	 * back the NATIVE doc for setDocData. Projecting through v3ToU16
-	 * here flattened animations to frame 0 and dropped truecolor and
-	 * unicode, and the restore's own keyframe trigger then rewrote the
-	 * journal with the flattened doc, destroying the autosave. Returns
-	 * null when the journal is empty or unreadable (then the legacy
-	 * IndexedDB snapshot is the fallback).
+	 * Restore source for state.js: hands back the NATIVE doc for
+	 * setDocData, never a v3ToU16 projection, which flattens animations
+	 * to frame 0 and drops truecolor and unicode; the restore's own
+	 * keyframe would then rewrite the journal with the flattened doc,
+	 * destroying the autosave. null when the journal is empty or
+	 * unreadable (the legacy IndexedDB snapshot is the fallback).
 	 */
 	const loadJournalSnapshot = async () => {
 		try {
@@ -1941,10 +1929,6 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		}
 	};
 
-	const getUndoHistory = () => null;
-
-	const setUndoHistory = _history => {};
-
 	setFont(currentFontName, _ => {
 		callback();
 	});
@@ -1960,11 +1944,11 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 	 */
 	const resolveUnicode = async codepoints => {
 		const resolved = new Map();
-		// collab lockout (visible in the charset UI): the vanilla Moebius
-		// dialect cannot carry unicode cells, and an apply-locally sender
-		// would silently diverge from every peer. The t0wnz extension
-		// suite (ids 23+) lifts it: when the server negotiated the suite,
-		// unicode cells travel natively and nothing substitutes.
+		// collab lockout: the vanilla Moebius dialect cannot carry
+		// unicode cells, and an apply-locally sender would silently
+		// diverge from every peer. The t0wnz extension suite (ids 23+)
+		// lifts it: once negotiated, unicode cells travel natively and
+		// nothing substitutes
 		const locked =
 			State.network?.isConnected?.() === true &&
 			State.network?.extCollab?.() !== true;
@@ -2018,8 +2002,40 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		endUndo: endUndo,
 		undo: undo,
 		redo: redo,
-		getUndoHistory: getUndoHistory,
-		setUndoHistory: setUndoHistory,
+		// closing lets another tab take the OPFS lock
+		stopJournal: () => {
+			journaling = false;
+			return journal.close();
+		},
+		wipeJournal: () => {
+			// an open stroke commits ahead of the wipe, or its commit would
+			// write the cleared doc back after it, as a keyframe still
+			// waiting would
+			endUndo();
+			clearTimeout(keyframeTimer);
+			keyframeTimer = null;
+			keyframeQueued = false;
+			wipes += 1;
+			if (journaling) {
+				return journal.wipe();
+			}
+			// a stopped journal's store stays closed, but a clear after a
+			// failed restore is the reset's whole point; a store opened for
+			// the wipe alone takes the backend once the old one lets go
+			return journal.close().then(() => {
+				const store = createJournalStore();
+				return store.wipe().finally(() => store.close());
+			});
+		},
+		// collab draws never journal, so leaving a session would otherwise
+		// keep the pre-session doc as the autosave. A step still open holds
+		// the words it wrote before a peer drew over them, and its record
+		// would replay those over this keyframe; committing it here leaves
+		// the keyframe the last word on them
+		journalKeyframe: () => {
+			endUndo();
+			scheduleJournalKeyframe(true);
+		},
 		deleteArea: deleteArea,
 		getAreaCells: getAreaCells,
 		setAreaCells: setAreaCells,
@@ -2061,13 +2077,12 @@ const createTextArtCanvas = (canvasContainer, callback) => {
 		},
 		// one EXPLICIT test seam for the chunk renderer's dirty-region
 		// internals: nothing in production reaches them from outside, and
-		// scattering them across the public surface read as API
+		// scattered across the public surface they would read as API
 		_chunkTestSeam: {
 			drawRegion,
 			enqueueDirtyRegion,
 			enqueueDirtyCell,
 			processDirtyRegions,
-			patchBufferAndEnqueueDirty,
 			coalesceRegions,
 		},
 	};

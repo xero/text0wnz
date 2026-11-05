@@ -127,6 +127,20 @@ describe('Segmented Control DOM Tests', () => {
 			await user.keyboard('{ArrowDown}');
 			expect(control.value()).toBe('block');
 		});
+
+		it('skips an arrow another handler cancelled', () => {
+			const onChange = vi.fn();
+			const control = build(onChange);
+			const e = new KeyboardEvent('keydown', {
+				key: 'ArrowRight',
+				bubbles: true,
+				cancelable: true,
+			});
+			e.preventDefault();
+			segment('block').dispatchEvent(e);
+			expect(control.value()).toBe('block');
+			expect(onChange).not.toHaveBeenCalled();
+		});
 	});
 
 	describe('disabled state', () => {

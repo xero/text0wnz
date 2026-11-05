@@ -18,14 +18,15 @@ const mockState = {
 		clearXBData: vi.fn(),
 		redrawEntireImage: vi.fn(),
 		getImage: vi.fn(() => ({ toDataURL: vi.fn(() => canvasDataURL) })),
-		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)), // Mock 6-bit palette data
+		// 6-bit palette data
+		getXBPaletteData: vi.fn(() => new Uint8Array(48).fill(21)),
 		getCurrentFrame: vi.fn(() => 0),
 	},
 	font: {
 		getWidth: vi.fn(() => 8),
 		getHeight: vi.fn(() => 16),
 		getLetterSpacing: vi.fn(() => false),
-		getData: vi.fn(() => null), // No font data by default
+		getData: vi.fn(() => null),
 	},
 };
 
@@ -42,24 +43,6 @@ vi.mock('../../src/js/client/state.js', () => ({ default: mockState }));
 vi.mock('../../src/js/client/ui.js', () => ({
 	$: vi.fn(id => mockUIElements[id] || { value: '' }),
 	enforceMaxBytes: vi.fn(),
-}));
-
-vi.mock('../../src/js/client/palette.js', () => ({
-	getUTF8: vi.fn(charCode => {
-		if (charCode < 128) {
-			return [charCode];
-		}
-		// Mock UTF-8 encoding for extended characters
-		if (charCode < 0x800) {
-			return [0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f)];
-		}
-		return [
-			0xe0 | (charCode >> 12),
-			0x80 | ((charCode >> 6) & 0x3f),
-			0x80 | (charCode & 0x3f),
-		];
-	}),
-	getUnicode: vi.fn(),
 }));
 
 const mockDocument = {
@@ -131,12 +114,10 @@ describe('File Module - Load and Save Operations', () => {
 				expect(Load.sauceToAppFont('IBM EGA')).toBe('CP437 8x14');
 				expect(Load.sauceToAppFont('IBM EGA43')).toBe('CP437 8x8');
 
-				// Code page variants
 				expect(Load.sauceToAppFont('IBM VGA 437')).toBe('CP437 8x16');
 				expect(Load.sauceToAppFont('IBM VGA 850')).toBe('CP850 8x16');
 				expect(Load.sauceToAppFont('IBM VGA 852')).toBe('CP852 8x16');
 
-				// Amiga fonts
 				expect(Load.sauceToAppFont('Amiga Topaz 1')).toBe('Topaz 500 8x16');
 				expect(Load.sauceToAppFont('Amiga Topaz 1+')).toBe('Topaz+ 500 8x16');
 				expect(Load.sauceToAppFont('Amiga MicroKnight')).toBe(
@@ -144,7 +125,6 @@ describe('File Module - Load and Save Operations', () => {
 				);
 				expect(Load.sauceToAppFont('Amiga P0T-NOoDLE')).toBe('P0t-NOoDLE 8x16');
 
-				// C64 fonts
 				expect(Load.sauceToAppFont('C64 PETSCII unshifted')).toBe(
 					'C64 PETSCII unshifted 8x8',
 				);
@@ -155,7 +135,6 @@ describe('File Module - Load and Save Operations', () => {
 				// XBIN embedded font
 				expect(Load.sauceToAppFont('XBIN')).toBe('XBIN');
 
-				// Unknown font
 				expect(Load.sauceToAppFont('Unknown Font')).toBe(null);
 				expect(Load.sauceToAppFont(null)).toBe(null);
 				expect(Load.sauceToAppFont(undefined)).toBe(null);
@@ -167,11 +146,9 @@ describe('File Module - Load and Save Operations', () => {
 				expect(Load.appToSauceFont('CP437 8x19')).toBe('IBM VGA25G');
 				expect(Load.appToSauceFont('CP437 8x14')).toBe('IBM EGA');
 
-				// Code page variants
 				expect(Load.appToSauceFont('CP850 8x16')).toBe('IBM VGA 850');
 				expect(Load.appToSauceFont('CP852 8x16')).toBe('IBM VGA 852');
 
-				// Amiga fonts
 				expect(Load.appToSauceFont('Topaz 500 8x16')).toBe('Amiga Topaz 1');
 				expect(Load.appToSauceFont('Topaz+ 500 8x16')).toBe('Amiga Topaz 1+');
 				expect(Load.appToSauceFont('MicroKnight 8x16')).toBe(
@@ -180,7 +157,6 @@ describe('File Module - Load and Save Operations', () => {
 				expect(Load.appToSauceFont('P0t-NOoDLE 8x16')).toBe('Amiga P0T-NOoDLE');
 				expect(Load.appToSauceFont('mO\'sOul 8x16')).toBe('Amiga mOsOul');
 
-				// C64 fonts
 				expect(Load.appToSauceFont('C64 PETSCII unshifted 8x8')).toBe(
 					'C64 PETSCII unshifted',
 				);
@@ -191,10 +167,10 @@ describe('File Module - Load and Save Operations', () => {
 				// XBIN embedded font
 				expect(Load.appToSauceFont('XBIN')).toBe('XBIN');
 
-				// Default case
-				expect(Load.appToSauceFont('Unknown Font')).toBe('IBM VGA');
-				expect(Load.appToSauceFont(null)).toBe('IBM VGA');
-				expect(Load.appToSauceFont(undefined)).toBe('IBM VGA');
+				expect(Load.appToSauceFont('Unknown Font')).toBe(null);
+				expect(Load.appToSauceFont('CP866 8x16')).toBe(null);
+				expect(Load.appToSauceFont(null)).toBe(null);
+				expect(Load.appToSauceFont(undefined)).toBe(null);
 			});
 		});
 
@@ -330,7 +306,7 @@ describe('File Module - Load and Save Operations', () => {
 
 		describe('Binary Save Format', () => {
 			it('should save BIN files when width is even', async () => {
-				mockState.textArtCanvas.getColumns.mockReturnValue(80); // Even width
+				mockState.textArtCanvas.getColumns.mockReturnValue(80);
 				const createElementSpy = vi.spyOn(mockDocument, 'createElement');
 
 				await Save.bin();
@@ -340,7 +316,7 @@ describe('File Module - Load and Save Operations', () => {
 			});
 
 			it('should not save BIN files when width is odd', async () => {
-				mockState.textArtCanvas.getColumns.mockReturnValue(81); // Odd width
+				mockState.textArtCanvas.getColumns.mockReturnValue(81);
 				mockState.textArtCanvas.getDoc.mockReturnValue(
 					createDocV3({ columns: 81, rows: 25 }),
 				);
@@ -499,6 +475,29 @@ describe('File Module - Load and Save Operations', () => {
 				await Save.ans();
 
 				expect(global.Blob).toHaveBeenCalled();
+			});
+
+			// SAUCE §TInfoS: FontName, 22 NUL-padded bytes at record offset 106
+			const savedFontName = () => {
+				const bytes = global.Blob.mock.calls[0][0][0];
+				const field = bytes.subarray(bytes.length - 128 + 106, bytes.length - 128 + 128);
+				return String.fromCharCode(...field).replace(/\0+$/, '');
+			};
+
+			it('writes the SAUCE name of a font in the table', async () => {
+				mockState.textArtCanvas.getCurrentFontName.mockReturnValue('CP850 8x16');
+
+				await Save.ans();
+
+				expect(savedFontName()).toBe('IBM VGA 850');
+			});
+
+			it('writes IBM VGA for a font the SAUCE table lacks', async () => {
+				mockState.textArtCanvas.getCurrentFontName.mockReturnValue('CP866 8x16');
+
+				await Save.ans();
+
+				expect(savedFontName()).toBe('IBM VGA');
 			});
 		});
 	});

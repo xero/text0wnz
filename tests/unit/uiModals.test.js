@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { websocketUI } from '../../src/js/client/ui.js';
 
 vi.mock('../../src/js/client/state.js', () => ({
 	default: {
@@ -25,8 +24,6 @@ vi.mock('../../src/js/client/state.js', () => ({
 	},
 }));
 
-void websocketUI; // Used in tests
-
 describe('UI Advanced Utilities', () => {
 	beforeEach(() => {
 		document.body.innerHTML = '';
@@ -40,7 +37,6 @@ describe('UI Advanced Utilities', () => {
 
 	describe('Additional DOM Utilities', () => {
 		it('should provide $$$ function for querySelectorAll', async () => {
-			// Need to import $$$ separately
 			const { $$$ } = await import('../../src/js/client/ui.js');
 
 			const div1 = document.createElement('div');
@@ -52,26 +48,6 @@ describe('UI Advanced Utilities', () => {
 
 			const results = $$$('.test-class-multi');
 			expect(results.length).toBe(2);
-		});
-	});
-
-	describe('createGrid', () => {
-		it('should be a function that creates grid controller', async () => {
-			const { createGrid } = await import('../../src/js/client/ui.js');
-
-			expect(typeof createGrid).toBe('function');
-
-			const container = document.createElement('div');
-			document.body.appendChild(container);
-
-			// The function will fail during rendering but we're just verifying the structure
-			expect(() => {
-				try {
-					createGrid(container);
-				} catch {
-					// Expected to fail due to mocking limitations, but we verified it's callable
-				}
-			}).not.toThrow();
 		});
 	});
 
@@ -312,7 +288,7 @@ describe('UI Advanced Utilities', () => {
 	describe('websocketUI', () => {
 		// the stylesheet gates .includedForWebsocket and
 		// .excludedForWebsocket on one document attribute; inline
-		// display writes lost to the sauce panel's id rule
+		// display writes lose to the sauce panel's id rule
 		it('flips the document attribute both ways', async () => {
 			const { websocketUI } = await import('../../src/js/client/ui.js');
 

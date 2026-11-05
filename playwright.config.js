@@ -3,8 +3,9 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-// macOS 27 privacy-protects ~/Library/Application Support/Firefox, which playwright's
-// bundled firefox reads on launch and hangs. give each worker its own empty home dir
+// macOS 27 privacy-protects ~/Library/Application Support/Firefox, which
+// playwright's bundled firefox reads on launch and hangs. give each worker
+// its own empty home dir
 // https://github.com/microsoft/playwright/issues/42768
 const firefoxEnv = process.platform === 'darwin'
 	? { ...process.env, CFFIXED_USER_HOME: mkdtempSync(path.join(tmpdir(), 'pw-firefox-home-')) }
@@ -64,7 +65,6 @@ export default defineConfig({
 			testMatch: 'e2e/**/*.spec.js',
 			use: {
 				browserName: 'firefox',
-				// Firefox-specific settings for CI environment
 				launchOptions: {
 					env: firefoxEnv,
 					firefoxUserPrefs: {
@@ -103,7 +103,7 @@ export default defineConfig({
 			},
 		},
 		{
-			// P1 pixel-parity gate: the same golden suite rendered through
+			// pixel-parity gate: the same golden suite rendered through
 			// the GL renderer (?renderer=gl) and asserted against the SAME
 			// goldens the 2D chunk renderer generated (integer zoom, dpr 1)
 			name: 'golden-gl',
@@ -124,9 +124,8 @@ export default defineConfig({
 			},
 		},
 		{
-			// GL rail: same SwiftShader
-			// flags the goldens use; asserts WebGL2 works in CI before any
-			// renderer code depends on it
+			// GL rail: the goldens' SwiftShader flags; proves WebGL2 works in
+			// CI so GL renderer regressions never tangle with CI plumbing
 			name: 'chromium-gl',
 			testMatch: 'gl/**/*.spec.js',
 			use: {

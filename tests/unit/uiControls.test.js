@@ -76,12 +76,56 @@ describe('UI Controls and Controllers', () => {
 
 			expect(sauceComments.value).toBe(originalValue);
 		});
+
+		describe('counts what the COMNT block writes', () => {
+			let sauceComments, sauceBytes;
+			const count = value => {
+				sauceComments.value = value;
+				enforceMaxBytes();
+				return sauceBytes.value;
+			};
+			beforeEach(() => {
+				sauceComments = document.createElement('textarea');
+				sauceComments.id = 'sauceComments';
+				sauceBytes = document.createElement('input');
+				sauceBytes.id = 'sauceBytes';
+				document.body.append(sauceComments, sauceBytes);
+			});
+
+			it('charges one byte per character in 64-byte slots', () => {
+				expect(count('')).toBe('0/16320 bytes');
+				expect(count('Hello 世界! 🌍')).toBe('64/16320 bytes');
+				expect(count('x'.repeat(65))).toBe('128/16320 bytes');
+				expect(count('é'.repeat(16400))).toBe('16320/16320 bytes');
+				expect(sauceComments.value).toBe('é'.repeat(16320));
+			});
+
+			it('charges a blank or short line a full slot', () => {
+				expect(count('a\n\nb')).toBe('192/16320 bytes');
+				expect(count('\n'.repeat(300))).toBe('16320/16320 bytes');
+				expect(sauceComments.value).toBe('\n'.repeat(254));
+			});
+
+			it('cuts the line that crosses the last slot and drops the rest', () => {
+				const blanks = '\n'.repeat(254);
+				expect(count(`${blanks}${'x'.repeat(100)}\nlost`)).toBe(
+					'16320/16320 bytes',
+				);
+				expect(sauceComments.value).toBe(`${blanks}${'x'.repeat(64)}`);
+			});
+
+			it('charges an empty box that keeps a blank line its slot', () => {
+				sauceComments.setAttribute('data-blank-line', '');
+				expect(count('')).toBe('64/16320 bytes');
+				expect(sauceComments.value).toBe('');
+			});
+		});
 	});
 
 	describe('websocketUI', () => {
 		// the stylesheet gates .includedForWebsocket and
 		// .excludedForWebsocket on this one attribute; inline display
-		// writes are gone (they lost to the sauce panel's id rule)
+		// writes lose to the sauce panel's id rule
 		it('marks the document collab-on when show is true', () => {
 			websocketUI(true);
 			expect(document.documentElement.dataset.collab).toBe('on');

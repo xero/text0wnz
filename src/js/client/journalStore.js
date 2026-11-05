@@ -1,25 +1,29 @@
 // @ts-check
 /**
- * Autosave journal store: the client side of the OPFS
- * journal. Picks a backend at open time:
+ * Autosave journal store. Backend, probed once per store:
  * - OPFS sync-access handles in a worker (journalWorker.js) wherever
- *   `navigator.storage.getDirectory` exists (Safari 15.2+, Chromium,
- *   Firefox 111+),
- * - an IndexedDB record log otherwise (Safari 15.0-15.1),
- * - an in-memory log as the last resort (private windows that refuse
- *   both; autosave then simply does not survive the tab).
+ *   `navigator.storage.getDirectory()` resolves (Safari 15.2+,
+ *   Chromium, Firefox 111+),
+ * - an IndexedDB record log where it is missing or rejects (Safari
+ *   15.0-15.1, Firefox private windows, Playwright's WebKit),
+ * - an in-memory log where IndexedDB refuses too (autosave then does
+ *   not survive the tab).
+ *
+ * An OPFS call that fails after the probe never falls back, as in a
+ * second tab, whose sync-access handle fails on the lock the first
+ * tab holds: the IndexedDB log may hold a journal from an earlier
+ * episode, and restoring that is worse than the u16 snapshot.
  *
  * The store owns append/compaction bookkeeping; the journal FORMAT
- * (records, replay, torn tails) lives in core/journal.ts. Backends are
- * injectable for tests.
+ * (records, replay, torn tails) lives in core/journal.ts.
  */
 
 import { shouldCompact } from '../core/index';
 import { trustedMessage } from './messageGuard.js';
+import { visibleTimeout } from './visibleWait.js';
 
 /**
  * @typedef {object} JournalBackend
- * @property {string} kind
  * @property {() => Promise<Uint8Array>} read
  * @property {(bytes: Uint8Array) => Promise<unknown>} append
  * @property {(bytes: Uint8Array) => Promise<unknown>} rewrite
@@ -29,8 +33,6 @@ import { trustedMessage } from './messageGuard.js';
 
 const IDB_NAME = 'text0wnz-journal';
 const IDB_STORE = 'records';
-
-// --------------------------------------------------------- OPFS backend
 
 /** @returns {JournalBackend} */
 const createOpfsBackend = () => {
@@ -62,25 +64,25 @@ const createOpfsBackend = () => {
 	const call = (op, bytes) =>
 		new Promise((resolve, reject) => {
 			const id = nextId++;
-			// A dead worker must degrade (legacy restore, warn-and-continue
+			// a dead worker must degrade (legacy restore, warn-and-continue
 			// writes), never wedge callers awaiting a reply forever
-			const deadline = setTimeout(() => {
+			const cancel = visibleTimeout(() => {
 				if (pending.delete(id)) {
 					reject(new Error(`journal worker timed out on ${op}`));
 				}
 			}, 10000);
 			pending.set(id, {
 				resolve: value => {
-					clearTimeout(deadline);
+					cancel();
 					resolve(value);
 				},
 				reject: error => {
-					clearTimeout(deadline);
+					cancel();
 					reject(error);
 				},
 			});
 			if (bytes) {
-				// Copy so the caller keeps its view; the buffer transfers
+				// copy so the caller keeps its view; the buffer transfers
 				const copy = new Uint8Array(bytes);
 				worker.postMessage({ id, op, bytes: copy }, [copy.buffer]);
 			} else {
@@ -88,7 +90,6 @@ const createOpfsBackend = () => {
 			}
 		});
 	return {
-		kind: 'opfs',
 		read: async () => (await call('read')) ?? new Uint8Array(0),
 		append: bytes => call('append', bytes),
 		rewrite: bytes => call('rewrite', bytes),
@@ -99,8 +100,6 @@ const createOpfsBackend = () => {
 		},
 	};
 };
-
-// ---------------------------------------------------- IndexedDB backend
 
 /** @returns {Promise<IDBDatabase>} */
 const openIdb = () =>
@@ -145,7 +144,6 @@ const createIdbBackend = () => {
 		}
 	};
 	return {
-		kind: 'idb',
 		read: () =>
 			withStore('readonly', async store => {
 				/** @type {Uint8Array[]} */
@@ -172,14 +170,11 @@ const createIdbBackend = () => {
 	};
 };
 
-// ------------------------------------------------------- memory backend
-
 /** @returns {JournalBackend} */
 export const createMemoryBackend = () => {
 	/** @type {Uint8Array[]} */
 	let chunks = [];
 	return {
-		kind: 'memory',
 		read: async () => {
 			const total = chunks.reduce((sum, c) => sum + c.length, 0);
 			const out = new Uint8Array(total);
@@ -203,24 +198,19 @@ export const createMemoryBackend = () => {
 	};
 };
 
-/** @returns {JournalBackend} */
-const pickBackend = () => {
+/** @returns {Promise<JournalBackend>} */
+const pickBackend = async () => {
 	try {
-		if (
-			typeof navigator !== 'undefined' &&
-			navigator.storage &&
-			typeof navigator.storage.getDirectory === 'function' &&
-			typeof Worker !== 'undefined'
-		) {
+		if (typeof Worker !== 'undefined') {
+			await navigator.storage.getDirectory();
 			return createOpfsBackend();
 		}
 	} catch {
 		// fall through
 	}
 	try {
-		if (typeof indexedDB !== 'undefined') {
-			return createIdbBackend();
-		}
+		(await openIdb()).close();
+		return createIdbBackend();
 	} catch {
 		// fall through
 	}
@@ -233,11 +223,29 @@ const pickBackend = () => {
  * @param {{bytes?: number, strokes?: number}} [options.compactLimits]
  */
 export const createJournalStore = (options = {}) => {
-	const backend = options.backend ?? pickBackend();
+	/** @type {JournalBackend} */
+	let backend;
 	let bytesSinceKeyframe = 0;
 	let strokesSinceKeyframe = 0;
+	// Strokes extend only a keyframe this session wrote. The file
+	// starts out with whatever an earlier session left, and a failed
+	// rewrite leaves it without the doc-level change the strokes queued
+	// behind that rewrite were drawn on.
+	let baseline = false;
+	// an append that runs while a rewrite still holds a slot sits ahead
+	// of it, so that rewrite's snapshot already holds the stroke
+	let rewritesQueued = 0;
+	// every call queues behind the probe, so all of them run on the
+	// one backend it picks, in the order they were made
 	/** @type {Promise<unknown>} */
-	let chain = Promise.resolve();
+	let chain = (options.backend ? Promise.resolve(options.backend) : pickBackend())
+		.then(picked => {
+			backend = picked;
+		});
+	// a closed worker never answers, so a later call would wait out its
+	// whole deadline, and a rewrite would find the worker half torn down
+	/** @type {Promise<unknown> | null} */
+	let closing = null;
 
 	/**
 	 * Serialize backend calls; a failed write never breaks the chain.
@@ -246,6 +254,9 @@ export const createJournalStore = (options = {}) => {
 	 * @returns {Promise<T>}
 	 */
 	const enqueue = fn => {
+		if (closing) {
+			return Promise.reject(new Error('journal store is closed'));
+		}
 		const next = chain.then(fn);
 		chain = next.catch(() => undefined);
 		return next;
@@ -255,30 +266,71 @@ export const createJournalStore = (options = {}) => {
 		/** Raw journal bytes as persisted (may be empty). */
 		open: () => enqueue(() => backend.read()),
 		/**
-		 * Append one stroke record. Resolves true when compaction is due.
+		 * Resolves true when the journal needs a keyframe no queued
+		 * rewrite will write: compaction is due, or the stroke was
+		 * dropped for want of a baseline.
 		 * @param {Uint8Array} bytes
 		 */
 		appendStroke: bytes =>
 			enqueue(async () => {
-				await backend.append(bytes);
+				if (!baseline) {
+					return rewritesQueued === 0;
+				}
+				try {
+					await backend.append(bytes);
+				} catch (error) {
+					// replay stops at a torn record, so a stroke appended past
+					// one would never come back
+					baseline = false;
+					throw error;
+				}
 				bytesSinceKeyframe += bytes.length;
 				strokesSinceKeyframe += 1;
-				return shouldCompact(
-					{ bytesSinceKeyframe, strokesSinceKeyframe },
-					options.compactLimits,
+				return (
+					rewritesQueued === 0 &&
+					shouldCompact(
+						{ bytesSinceKeyframe, strokesSinceKeyframe },
+						options.compactLimits,
+					)
 				);
 			}),
 		/**
-		 * Replace the whole journal (fresh keyframe / compaction).
-		 * @param {Uint8Array} bytes
+		 * Takes its queue slot at call time and awaits the bytes inside
+		 * it, so a stroke appended after this call lands behind the
+		 * rewrite, however long the encode runs.
+		 * @param {Uint8Array | Promise<Uint8Array>} bytes whole journal:
+		 *   keyframe or compaction
 		 */
-		rewrite: bytes =>
-			enqueue(async () => {
-				await backend.rewrite(bytes);
+		rewrite: bytes => {
+			const ready = Promise.resolve(bytes);
+			// a snapshot that rejects while earlier writes still run would
+			// otherwise report as unhandled before its slot rethrows it
+			ready.catch(() => undefined);
+			rewritesQueued += 1;
+			return enqueue(async () => {
+				baseline = false;
+				try {
+					await backend.rewrite(await ready);
+				} finally {
+					rewritesQueued -= 1;
+				}
+				baseline = true;
 				bytesSinceKeyframe = 0;
 				strokesSinceKeyframe = 0;
+			});
+		},
+		/**
+		 * Empties the journal behind every earlier call. Strokes then
+		 * drop until a later rewrite lands, as at boot.
+		 */
+		wipe: () =>
+			enqueue(async () => {
+				baseline = false;
+				bytesSinceKeyframe = 0;
+				strokesSinceKeyframe = 0;
+				await backend.wipe();
 			}),
-		// wipe/stats/close and backendKind had no production callers;
-		// the backend contract keeps wipe/close for the worker protocol
+		/** Lets go of the backend behind every earlier call. */
+		close: () => (closing ??= enqueue(() => backend.close())),
 	};
 };

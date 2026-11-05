@@ -1,11 +1,8 @@
 /**
- * Live round trip against the VENDORED vanilla Moebius server
- * (1.0.29, the one the scene runs): the page joins by typing an
- * address into the Connect form, draws, and a raw peer on the same
- * joint sees the DRAW; the peer draws and the page shows it. Also pins
- * the local/chat button handoff and the dead-dial report. Chromium
- * project only, like the bun round trip: one engine runs the full
- * stack, the transport logic is unit-tested engine-neutrally.
+ * Runs against the VENDORED vanilla Moebius server (1.0.29, the one
+ * the scene runs). Chromium project only, like the bun round trip: one
+ * engine runs the full stack, the transport logic is unit-tested
+ * engine-neutrally.
  */
 import { test, expect } from '@playwright/test';
 import { clickTool } from './helpers/editorHelpers.js';
@@ -93,10 +90,7 @@ const bootPage = async page => {
 };
 
 const drawAt = async (page, cx, cy) => {
-	await page.locator('#brushes').click();
-	await page.waitForTimeout(200);
 	await clickTool(page, 'halfblock');
-	await page.waitForTimeout(200);
 	const point = await page.evaluate(
 		([x, y]) => {
 			const s = window.__t0wnz.State;
@@ -111,7 +105,6 @@ const drawAt = async (page, cx, cy) => {
 		[cx, cy],
 	);
 	await page.mouse.click(point.x, point.y);
-	await page.waitForTimeout(300);
 };
 
 const charAt = (page, x, y) =>
@@ -127,7 +120,6 @@ test.describe('joining a vanilla Moebius server by address', () => {
 	}) => {
 		test.skip(browserName !== 'chromium', 'one engine runs the full stack');
 		await bootPage(page);
-		// working locally: the slot reads local, chat stays shut
 		await expect(page.locator('#networkButton')).toBeVisible();
 		await expect(page.locator('#chatButton')).toBeHidden();
 
@@ -141,7 +133,6 @@ test.describe('joining a vanilla Moebius server by address', () => {
 			null,
 			{ timeout: 10000 },
 		);
-		await page.waitForTimeout(400);
 		await expect(page.locator('#chatButton')).toBeVisible();
 		await expect(page.locator('#networkButton')).toBeHidden();
 		// the vanilla 6-bit palette arrived at full brightness: entry 9
@@ -151,7 +142,6 @@ test.describe('joining a vanilla Moebius server by address', () => {
 		expect(brightBlue).toBe(0xff);
 
 		const peer = await peerJoin('peer');
-		// peer -> page
 		peer.ws.send(
 			JSON.stringify({
 				type: 9,
@@ -160,7 +150,6 @@ test.describe('joining a vanilla Moebius server by address', () => {
 		);
 		await expect.poll(() => charAt(page, 5, 3), { timeout: 8000 }).toBe(66);
 
-		// page -> peer
 		const arriving = nextDraw(peer.ws);
 		await drawAt(page, 2, 1);
 		const frame = await arriving;

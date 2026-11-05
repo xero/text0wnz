@@ -9,7 +9,6 @@ const mockIndexedDB = () => {
 				onsuccess: null,
 				onerror: null,
 			};
-			// Immediately trigger success
 			setTimeout(() => {
 				if (request.onsuccess) {
 					request.onsuccess({ target: request });
@@ -23,7 +22,6 @@ const mockIndexedDB = () => {
 				onsuccess: null,
 				onerror: null,
 			};
-			// Immediately trigger success
 			setTimeout(() => {
 				if (request.onsuccess) {
 					request.onsuccess({ target: request });
@@ -61,7 +59,6 @@ const mockIndexedDB = () => {
 
 	global.indexedDB = {
 		open: vi.fn(() => {
-			// Simulate successful opening immediately
 			setTimeout(() => {
 				if (mockRequest.onsuccess) {
 					mockRequest.onsuccess({ target: mockRequest });
@@ -139,16 +136,34 @@ describe('Storage Utilities', () => {
 			expect(consoleSpy).toHaveBeenCalled();
 			consoleSpy.mockRestore();
 		});
+
+		it('mergeSettings writes the patch over the stored fields only', () => {
+			const settings = {
+				fontName: 'Topaz 8x16',
+				iceColors: true,
+				letterSpacing: true,
+				scaleFactor: 1,
+				paletteColors: [[0, 0, 42, 255]],
+			};
+			localStorage.setItem('text0wnz-settings', JSON.stringify(settings));
+
+			expect(Storage.mergeSettings({ scaleFactor: 2.5 })).toBe(true);
+			expect(Storage.loadSettings()).toEqual({ ...settings, scaleFactor: 2.5 });
+		});
+
+		it('mergeSettings over an empty store writes the patch alone', () => {
+			Storage.mergeSettings({ scaleFactor: 2 });
+			expect(Storage.loadSettings()).toEqual({ scaleFactor: 2 });
+		});
 	});
 
 	describe('IndexedDB Operations', () => {
 		it('shares one connection across ops instead of opening per call', async () => {
 			await Storage.saveFontData('A', [1]);
 			await Storage.loadFontData('A');
-			await Storage.saveUndoHistory([]);
-			// the old per-call dbPromise opened one connection per op
-			// (three here) and never closed any; the shared handle opens
-			// at most once (zero when an earlier test already owns it)
+			await Storage.loadCanvasData();
+			// the shared handle opens at most once (zero when an earlier test
+			// already owns it); a per-call open leaks one connection per op
 			expect(
 				global.indexedDB.open.mock.calls.length,
 			).toBeLessThanOrEqual(1);
@@ -162,11 +177,6 @@ describe('Storage Utilities', () => {
 		it('should have font data methods', () => {
 			expect(typeof Storage.saveFontData).toBe('function');
 			expect(typeof Storage.loadFontData).toBe('function');
-		});
-
-		it('should have undo history methods', () => {
-			expect(typeof Storage.saveUndoHistory).toBe('function');
-			expect(typeof Storage.loadUndoHistory).toBe('function');
 		});
 
 		it('should have clearAll method', () => {
@@ -206,14 +216,12 @@ describe('Storage Utilities', () => {
 
 			// IndexedDB is unavailable in jsdom; the call must fail gracefully
 			const result = await Storage.saveCanvasData(canvasData);
-			// Result could be true or false depending on environment
 			expect(typeof result).toBe('boolean');
 		});
 
 		it('should handle loadCanvasData without crashing', async () => {
 			// IndexedDB is unavailable in jsdom; the call must fail gracefully
 			const result = await Storage.loadCanvasData();
-			// Result could be null or an object depending on environment
 			expect(result === null || typeof result === 'object').toBe(true);
 		});
 
@@ -230,27 +238,6 @@ describe('Storage Utilities', () => {
 
 		it('should handle loadFontData without crashing', async () => {
 			const result = await Storage.loadFontData('XBIN');
-			expect(result === null || typeof result === 'object').toBe(true);
-		});
-
-		it('should handle saveUndoHistory without crashing', async () => {
-			const undoHistory = {
-				currentUndo: [[0, 1234, 0, 0]],
-				undoBuffer: [
-					[
-						[1, 5678, 1, 0],
-						[2, 9012, 2, 0],
-					],
-				],
-				redoBuffer: [],
-			};
-
-			const result = await Storage.saveUndoHistory(undoHistory);
-			expect(typeof result).toBe('boolean');
-		});
-
-		it('should handle loadUndoHistory without crashing', async () => {
-			const result = await Storage.loadUndoHistory();
 			expect(result === null || typeof result === 'object').toBe(true);
 		});
 	});

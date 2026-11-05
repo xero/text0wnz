@@ -3,8 +3,9 @@
  * label in StrokeMeta would bump the T0WJ journal format and touch the
  * collab path), so this table mirrors the arena stroke by stroke: one
  * row per commit, truncated with the redo tail, evicted with the ring.
- * Tools with a better name than their rail id register it just before
- * they draw; everything else labels from the active tool.
+ * Edit actions (delete, paste, flips) pend() a name just before they
+ * draw; a canvas resize names itself at commit; everything else labels
+ * from the active tool.
  *
  * Typing groups at display level only: consecutive Type rows within
  * 2.5 seconds render as one step whose jump undoes them all.
@@ -61,7 +62,6 @@ const createHistoryLabels = () => {
 		return TOOL_LABELS[tool] ?? 'Edit';
 	};
 
-	/** a menu or bar action names its stroke before it draws */
 	const pend = label => {
 		pending = label;
 	};
@@ -75,14 +75,20 @@ const createHistoryLabels = () => {
 		pending = null;
 	};
 
-	const committed = () => {
+	/**
+	 * A named commit (a resize step) never opened a stroke, so it leaves
+	 * the snapshot and pend alone for the stroke that did.
+	 */
+	const committed = label => {
 		rows.splice(cursor);
-		if (snapshot) {
+		if (label) {
+			rows.push({ label, time: Date.now() });
+		} else if (snapshot) {
 			rows.push(snapshot);
 			snapshot = null;
 			// pending stays: it belongs to the NEXT stroke, pended before
-			// startUndo; the prior stroke's async flush used to wipe it
-			// and the history row wore the previous tool's label
+			// startUndo, and wiping it here would label that stroke's row
+			// with the previous tool
 		} else {
 			rows.push({ label: pending ?? fallbackLabel(), time: Date.now() });
 			pending = null;
@@ -108,6 +114,14 @@ const createHistoryLabels = () => {
 		}
 	};
 
+	const cleared = () => {
+		if (rows.length) {
+			rows.length = 0;
+			cursor = 0;
+			notify();
+		}
+	};
+
 	const evicted = () => {
 		if (rows.length) {
 			rows.shift();
@@ -117,9 +131,8 @@ const createHistoryLabels = () => {
 	};
 
 	/**
-	 * Display steps: step.at is the cursor position reached by jumping
-	 * to it, so consecutive grouped Type rows share one step whose
-	 * position is the group's last stroke.
+	 * step.at is the cursor position reached by jumping to it, so a
+	 * group of Type rows shares one step at the group's last stroke.
 	 */
 	const steps = () => {
 		const out = [];
@@ -202,6 +215,7 @@ const createHistoryLabels = () => {
 		undone,
 		redone,
 		redoCleared,
+		cleared,
 		evicted,
 		steps,
 		jump,

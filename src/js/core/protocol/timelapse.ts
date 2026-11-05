@@ -1,15 +1,14 @@
 /**
- * Timelapse replay: the server's EXT_TIMELAPSE payload
- * (baseline snapshot + bounded op log) becomes a multi-frame doc the
- * client exports as an animation. The replay walks the mutating ops
- * (draws, batches, resizes) over the baseline grid and snapshots at a
- * stride chosen so the movie stays under maxFrames; the final state is
- * always the last frame. Resizes mid-log are handled row-aware and the
- * doc is built at the FINAL dimensions (earlier snapshots crop or pad).
+ * Timelapse replay: the server's EXT_TIMELAPSE payload (baseline
+ * snapshot + bounded op log) becomes a multi-frame doc, snapshotting
+ * at a stride that keeps the movie under maxFrames. Resizes mid-log
+ * are handled row-aware and the doc is built at the FINAL dimensions
+ * (earlier snapshots crop or pad).
  */
 
 import {
 	DEFAULT_FRAME_CELL_BUDGET,
+	MAX_DOC_CELLS,
 	createDocV3,
 	glyphWord,
 	type DocV3,
@@ -18,6 +17,7 @@ import { MoebiusAction, ProtocolError } from './moebius.js';
 import {
 	blockToExtCell,
 	expandExtCells,
+	extCodepointToGlyphId,
 	sanitizeExtCell,
 	sanitizeExtPalette,
 	T0wnzAction,
@@ -37,8 +37,6 @@ interface Grid {
 	cells: ExtCell[];
 }
 
-const MAX_CELLS = 10_000_000;
-
 const MUTATING = new Set<number>([
 	MoebiusAction.DRAW,
 	MoebiusAction.SET_CANVAS_SIZE,
@@ -53,7 +51,7 @@ const validDims = (columns: unknown, rows: unknown): boolean =>
 	Number.isInteger(rows) &&
 	(columns as number) > 0 &&
 	(rows as number) > 0 &&
-	(columns as number) * (rows as number) <= MAX_CELLS;
+	(columns as number) * (rows as number) <= MAX_DOC_CELLS;
 
 export const timelapseToDoc = (
 	payload: Record<string, unknown>,
@@ -167,7 +165,6 @@ export const timelapseToDoc = (
 							code: block.code as number,
 							fg: block.fg as number,
 							bg: block.bg as number,
-							ext: sanitizeExtCell(block.ext) ?? undefined,
 						}),
 					);
 				}
@@ -252,14 +249,11 @@ export const timelapseToDoc = (
 		for (let y = 0; y < copyRows; y++) {
 			for (let x = 0; x < copyCols; x++) {
 				const cell = snapshot.cells[y * snapshot.columns + x];
-				let glyphId: number;
-				try {
-					glyphId = doc.glyphTable.idFor(0, cell.u);
-				} catch {
-					glyphId = 63; // '?'
-				}
 				const j = y * finalColumns + x;
-				target.glyph[j] = glyphWord(glyphId, cell.a);
+				target.glyph[j] = glyphWord(
+					extCodepointToGlyphId(doc.glyphTable, cell.u),
+					cell.a,
+				);
 				target.fg[j] = cell.fg >>> 0;
 				target.bg[j] = cell.bg >>> 0;
 			}

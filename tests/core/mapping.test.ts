@@ -1,8 +1,6 @@
 /**
- * Mapping fuzz: round-trip identity for the one shared
- * pointer-to-cell mapping across zooms 0.5-4, fractional
- * origins, dpr-snapped origins, and letter-spacing cell widths. The
- * e2e spec replays the same probe pattern through real DOM events on
+ * Mapping fuzz for the one shared pointer-to-cell mapping. The e2e
+ * spec replays the same probe pattern through real DOM events on
  * chromium, webkit, and firefox; this file owns the exhaustive sweep.
  */
 import { describe, it, expect } from 'vitest';

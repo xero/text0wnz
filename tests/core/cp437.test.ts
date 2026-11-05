@@ -1,12 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { cp437ToUnicode, unicodeToCp437 } from '../../src/js/core/cp437.js';
-import { getUnicode } from '../../src/js/client/palette.js';
 
 describe('core cp437 mapping', () => {
-	it('matches the client table for every byte until the client migrates', () => {
-		for (let byte = 0; byte < 256; byte++) {
-			expect(cp437ToUnicode(byte)).toBe(getUnicode(byte));
-		}
+	it('maps CP437 glyphs to their Unicode codepoints', () => {
+		expect(cp437ToUnicode(1)).toBe(0x263a); // ☺
+		expect(cp437ToUnicode(3)).toBe(0x2665); // ♥
+		expect(cp437ToUnicode(127)).toBe(0x2302); // ⌂
+		expect(cp437ToUnicode(128)).toBe(0x00c7); // Ç
+		expect(cp437ToUnicode(176)).toBe(0x2591); // ░
+		expect(cp437ToUnicode(219)).toBe(0x2588); // █
+		expect(cp437ToUnicode(254)).toBe(0x25a0); // ■
 	});
 
 	it('round-trips every byte through unicode except the NBSP collision', () => {
