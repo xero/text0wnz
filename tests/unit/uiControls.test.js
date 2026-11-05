@@ -113,6 +113,12 @@ describe('UI Controls and Controllers', () => {
 				);
 				expect(sauceComments.value).toBe(`${blanks}${'x'.repeat(64)}`);
 			});
+
+			it('charges an empty box that keeps a blank line its slot', () => {
+				sauceComments.setAttribute('data-blank-line', '');
+				expect(count('')).toBe('64/16320 bytes');
+				expect(sauceComments.value).toBe('');
+			});
 		});
 	});
 

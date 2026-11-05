@@ -73,3 +73,32 @@ test.describe('Enter in keyboard mode', () => {
 		expect(landed).toBe(0x2764);
 	});
 });
+
+test.describe('Enter with the selection tool', () => {
+	test.beforeEach(async ({ page }) => {
+		await parkToolSettings(page);
+		await page.goto('/?test');
+		await bridgeReady(page);
+		await page.evaluate(() => window.__t0wnz.State.cursor.move(2, 3));
+		await page.locator('#selection').click();
+	});
+
+	for (const key of ['Enter', 'NumpadEnter']) {
+		test(`${key} on the focused File button opens the menu and keeps the tool`, async ({ page }) => {
+			await page.locator('#file').focus();
+			await page.keyboard.press(key);
+
+			await expect(page.locator('#mainMenu')).toBeVisible();
+			await expect(page.locator('#selection')).toHaveClass(/toolbarDisplayed/);
+			expect(await cursorAt(page)).toEqual({ x: 2, y: 3 });
+		});
+
+		// the tool's rail entry takes no focus, so the canvas scope holds it
+		test(`${key} after picking the tool returns to keyboard mode on a new line`, async ({ page }) => {
+			await page.keyboard.press(key);
+
+			await expect(page.locator('#keyboard')).toHaveClass(/toolbarDisplayed/);
+			expect(await cursorAt(page)).toEqual({ x: 0, y: 4 });
+		});
+	}
+});

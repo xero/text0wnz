@@ -6,7 +6,8 @@
 import State from './state.js';
 import { $ } from './ui.js';
 import { UNICODE_BLOCKS } from '../core/blocksData.js';
-import { CharsetError, parseCharset } from '../core/charsets.js';
+import { CharsetError, parseCharset, tokenForChar } from '../core/charsets.js';
+import { insertToken } from './keyboard.js';
 
 const GRID_LIMIT = 512;
 const MAX_IMPORT_PAGES = 256;
@@ -24,23 +25,6 @@ const createCharsetPicker = () => {
 
 	const cellWidth = () => State.fontWidth * 1.5;
 	const cellHeight = () => State.fontHeight * 1.5;
-
-	const insertCodepoint = codepoint => {
-		State.textArtCanvas.resolveUnicode([codepoint]).then(resolved => {
-			const charCode = resolved.get(codepoint) ?? 63;
-			State.textArtCanvas.startUndo();
-			State.textArtCanvas.draw(callback => {
-				callback(
-					charCode,
-					State.palette.getForegroundColor(),
-					State.palette.getBackgroundColor(),
-					State.cursor.getX(),
-					State.cursor.getY(),
-				);
-			}, false);
-			State.cursor.right();
-		});
-	};
 
 	const paintGlyph = (canvas, codepoint) => {
 		const width = Math.round(cellWidth());
@@ -87,8 +71,10 @@ const createCharsetPicker = () => {
 				continue;
 			}
 			canvas.title = `U+${codepoint.toString(16).toUpperCase().padStart(4, '0')}`;
-			const cp = codepoint;
-			canvas.addEventListener('click', () => insertCodepoint(cp));
+			// a character CP437 has inserts its byte, as typing, paste, and
+			// imported pages do, so it rides the artist's font
+			const token = tokenForChar(String.fromCodePoint(codepoint));
+			canvas.addEventListener('click', () => insertToken(token));
 			grid.appendChild(canvas);
 		}
 		if (end < last) {

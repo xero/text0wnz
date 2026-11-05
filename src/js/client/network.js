@@ -24,6 +24,7 @@ import {
 	targetToUrl,
 } from './collabTarget.js';
 import { createRecentList } from './recentList.js';
+import { settlesWithin, visibleTimeout } from './visibleWait.js';
 
 // blocked site data must not abort the boot: localStorage access
 // throws under some privacy modes, and every other module guards it
@@ -162,6 +163,13 @@ const createWorkerHandler = inputHandle => {
 	let syncQueued = false;
 	let syncRetryTimer = 0;
 	let passwordTried = false;
+	// an open Sauce Editor is a draft that outranks the room until it
+	// closes: room SAUCE waits here, so a peer's edit cannot overwrite
+	// typing mid-sentence. Save sends ours over it; any other close
+	// restores the editor (main.js) and then lands it
+	let sauceDraft = false;
+	/** @type {object | null} */
+	let heldSauce = null;
 	// the dial in flight, one object so every path that ends it (adopt,
 	// refusal, dead socket, dismissal, stay local) clears the same
 	// thing: its url, and the typed spelling when it came from the
@@ -248,6 +256,9 @@ const createWorkerHandler = inputHandle => {
 		remoteCursors.clear();
 		peerNicks.clear();
 		websocketUI(false);
+		if (hadSession) {
+			leaveSession();
+		}
 		if (hadSession && wasConnected) {
 			// local autosave resumes with connected cleared, but the user
 			// must still hear that the session dropped
@@ -345,8 +356,24 @@ const createWorkerHandler = inputHandle => {
 	// untitled room still reads as a session rather than a bare suffix
 	const sessionTitle = title => title || 'collab mode';
 
+	// what the session leaves on screen is the local doc: the journal
+	// keeps it past a reload, and the untitled room's placeholder must
+	// not name its saves
+	const leaveSession = () => {
+		heldSauce = null;
+		State.textArtCanvas.journalKeyframe?.();
+		if (State.title === sessionTitle('')) {
+			State.title = 'Untitled';
+			document.dispatchEvent(new CustomEvent('onSauceChange'));
+		}
+	};
+
 	/** the room's SAUCE fields: a peer's edit, or a join or resync doc's */
 	const applySauce = meta => {
+		if (sauceDraft) {
+			heldSauce = meta;
+			return;
+		}
 		muted(() => {
 			if (typeof meta.title === 'string') {
 				State.title = sessionTitle(meta.title);
@@ -358,7 +385,6 @@ const createWorkerHandler = inputHandle => {
 			for (const [key, id] of [
 				['author', 'sauceAuthor'],
 				['group', 'sauceGroup'],
-				['comments', 'sauceComments'],
 			]) {
 				const field = document.getElementById(id);
 				if (field && typeof meta[key] === 'string') {
@@ -366,6 +392,10 @@ const createWorkerHandler = inputHandle => {
 				}
 			}
 			if (typeof meta.comments === 'string') {
+				const field = document.getElementById('sauceComments');
+				if (field) {
+					Load.fillComments(field, meta.comments);
+				}
 				// the text arrives without an input event, so the byte
 				// counter would show the old size until a keystroke
 				enforceMaxBytes();
@@ -375,12 +405,25 @@ const createWorkerHandler = inputHandle => {
 		document.dispatchEvent(new CustomEvent('onSauceChange'));
 	};
 
+	const holdSauce = () => {
+		sauceDraft = true;
+	};
+
+	const releaseSauce = () => {
+		const meta = heldSauce;
+		sauceDraft = false;
+		heldSauce = null;
+		if (meta) {
+			applySauce(meta);
+		}
+	};
+
 	/** @type {((payload: object) => void) | null} */
 	let timelapseWaiter = null;
 
 	/**
 	 * The room's baseline + op log (EXT_TIMELAPSE); resolves null on
-	 * vanilla sessions or a 10s server silence.
+	 * vanilla sessions or after 10s of server silence the page saw.
 	 * @returns {Promise<object | null>}
 	 */
 	const requestTimelapse = () =>
@@ -389,12 +432,12 @@ const createWorkerHandler = inputHandle => {
 				resolve(null);
 				return;
 			}
-			const timer = setTimeout(() => {
+			const cancel = visibleTimeout(() => {
 				timelapseWaiter = null;
 				resolve(null);
 			}, 10000);
 			timelapseWaiter = payload => {
-				clearTimeout(timer);
+				cancel();
 				resolve(payload);
 			};
 			State.worker.postMessage({
@@ -538,17 +581,6 @@ const createWorkerHandler = inputHandle => {
 			State.textArtCanvas.redrawEntireImage();
 		});
 	};
-
-	/** true once the promise settles, false when the wait runs out first */
-	const settlesWithin = (promise, ms) =>
-		new Promise(resolve => {
-			const timer = setTimeout(resolve, ms, false);
-			const done = () => {
-				clearTimeout(timer);
-				resolve(true);
-			};
-			promise.then(done, done);
-		});
 
 	// glyph fetches carry no timeout, and every later frame waits on
 	// this one, so past the wait the cells drop and a resync brings them
@@ -967,9 +999,11 @@ const createWorkerHandler = inputHandle => {
 			group: meta.group ?? '',
 			comments: meta.comments ?? '',
 		});
-		// peers title their pages by the room's rule, and so does ours
+		// peers title their pages by the room's rule, and so does ours. A
+		// held room SAUCE reached the room before ours, which replaces it
 		if (sent) {
 			State.title = sessionTitle(meta.title);
+			heldSauce = null;
 		}
 		return sent;
 	};
@@ -997,6 +1031,10 @@ const createWorkerHandler = inputHandle => {
 			: [];
 		lastSeq = -1;
 		dropPending();
+		// a draft never spans a join: the editor cannot be showing behind
+		// the dial, and the room's SAUCE belongs to the new document
+		sauceDraft = false;
+		heldSauce = null;
 		/** @type {{type: number, data: object}[]} */
 		const ops = [];
 		try {
@@ -1102,12 +1140,16 @@ const createWorkerHandler = inputHandle => {
 	};
 
 	const stayLocal = () => {
+		const hadSession = connected && collaborationMode;
 		attempt = null;
 		State.modal.close();
 		collaborationMode = false;
 		connected = false;
 		websocketUI(false);
 		State.worker.postMessage({ cmd: 'disconnect' });
+		if (hadSession) {
+			leaveSession();
+		}
 	};
 
 	/** a dial that died before the handshake: say so where the user is */
@@ -1260,6 +1302,8 @@ const createWorkerHandler = inputHandle => {
 		sendIceColorsChange: sendIceColorsChange,
 		sendLetterSpacingChange: sendLetterSpacingChange,
 		sendSauce: sendSauce,
+		holdSauce,
+		releaseSauce,
 	};
 };
 

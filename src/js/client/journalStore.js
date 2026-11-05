@@ -20,6 +20,7 @@
 
 import { shouldCompact } from '../core/index';
 import { trustedMessage } from './messageGuard.js';
+import { visibleTimeout } from './visibleWait.js';
 
 /**
  * @typedef {object} JournalBackend
@@ -65,18 +66,18 @@ const createOpfsBackend = () => {
 			const id = nextId++;
 			// a dead worker must degrade (legacy restore, warn-and-continue
 			// writes), never wedge callers awaiting a reply forever
-			const deadline = setTimeout(() => {
+			const cancel = visibleTimeout(() => {
 				if (pending.delete(id)) {
 					reject(new Error(`journal worker timed out on ${op}`));
 				}
 			}, 10000);
 			pending.set(id, {
 				resolve: value => {
-					clearTimeout(deadline);
+					cancel();
 					resolve(value);
 				},
 				reject: error => {
-					clearTimeout(deadline);
+					cancel();
 					reject(error);
 				},
 			});
@@ -241,6 +242,10 @@ export const createJournalStore = (options = {}) => {
 		.then(picked => {
 			backend = picked;
 		});
+	// a closed worker never answers, so a later call would wait out its
+	// whole deadline, and a rewrite would find the worker half torn down
+	/** @type {Promise<unknown> | null} */
+	let closing = null;
 
 	/**
 	 * Serialize backend calls; a failed write never breaks the chain.
@@ -249,6 +254,9 @@ export const createJournalStore = (options = {}) => {
 	 * @returns {Promise<T>}
 	 */
 	const enqueue = fn => {
+		if (closing) {
+			return Promise.reject(new Error('journal store is closed'));
+		}
 		const next = chain.then(fn);
 		chain = next.catch(() => undefined);
 		return next;
@@ -311,5 +319,18 @@ export const createJournalStore = (options = {}) => {
 				strokesSinceKeyframe = 0;
 			});
 		},
+		/**
+		 * Empties the journal behind every earlier call. Strokes then
+		 * drop until a later rewrite lands, as at boot.
+		 */
+		wipe: () =>
+			enqueue(async () => {
+				baseline = false;
+				bytesSinceKeyframe = 0;
+				strokesSinceKeyframe = 0;
+				await backend.wipe();
+			}),
+		/** Lets go of the backend behind every earlier call. */
+		close: () => (closing ??= enqueue(() => backend.close())),
 	};
 };

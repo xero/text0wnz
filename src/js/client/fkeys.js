@@ -8,9 +8,14 @@ import State from './state.js';
 import { $ } from './ui.js';
 import { fitGlyphCanvas, get1xFont } from './glyphScale.js';
 import { pageFromString, pagesForRange } from '../core/charsets.js';
-import { PASTE_SUBSTITUTE } from '../core/paste.js';
 
-const createFKeys = () => {
+/**
+ * Both from keyboard.js, so the F-keys type and yield to fields the
+ * way the rest of keyboard mode does
+ * @param {(token: number) => void} insert insertToken
+ * @param {(target: EventTarget | null) => boolean} isTextField
+ */
+const createFKeys = (insert, isTextField) => {
 	// Stolen "savagely" from Moebius, who stole it "mercilessly" from
 	// PabloDraw, thanks Curtis! lol
 	const predefinedSets = [
@@ -125,29 +130,6 @@ const createFKeys = () => {
 		}
 	};
 
-	const insertToken = token => {
-		const commit = charCode => {
-			State.textArtCanvas.startUndo();
-			State.textArtCanvas.draw(callback => {
-				callback(
-					charCode,
-					State.palette.getForegroundColor(),
-					State.palette.getBackgroundColor(),
-					State.cursor.getX(),
-					State.cursor.getY(),
-				);
-			}, false);
-			State.cursor.right();
-		};
-		if (token >= 0) {
-			commit(token);
-			return;
-		}
-		State.textArtCanvas
-			.resolveUnicode([~token])
-			.then(resolved => commit(resolved.get(~token) ?? PASTE_SUBSTITUTE));
-	};
-
 	const updateCharsetButton = page => {
 		const name = $('charsetName');
 		const counter = $('charsetPage');
@@ -219,7 +201,7 @@ const createFKeys = () => {
 		const wrap = $('fkey' + i + 'w');
 		if (canvas && wrap) {
 			wrap.addEventListener('click', () => {
-				insertToken(fkeySets[currentSetIndex].chars[i]);
+				insert(fkeySets[currentSetIndex].chars[i]);
 			});
 		}
 	}
@@ -250,6 +232,9 @@ const createFKeys = () => {
 	}
 
 	const keyDown = e => {
+		if (isTextField(e.target)) {
+			return;
+		}
 		const fKeyMatch = e.code.match(/^F(\d+)$/);
 		if (
 			!e.altKey &&
@@ -260,7 +245,7 @@ const createFKeys = () => {
 			fKeyMatch[1] <= 12
 		) {
 			e.preventDefault();
-			insertToken(fkeySets[currentSetIndex].chars[fKeyMatch[1] - 1]);
+			insert(fkeySets[currentSetIndex].chars[fKeyMatch[1] - 1]);
 		}
 		else if (e.ctrlKey && !e.altKey && !e.metaKey && e.code === 'BracketLeft') {
 			e.preventDefault();

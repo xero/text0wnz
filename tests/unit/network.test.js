@@ -5,7 +5,8 @@ import {
 	createWorkerHandler,
 	createChatController,
 } from '../../src/js/client/network.js';
-import { $, enforceMaxBytes, onEnter } from '../../src/js/client/ui.js';
+import { $, enforceMaxBytes, onEnter, websocketUI } from '../../src/js/client/ui.js';
+import { Load } from '../../src/js/client/file.js';
 import {
 	EXT_SUITE_CAP,
 	MoebiusAction,
@@ -37,6 +38,7 @@ vi.mock('../../src/js/client/state.js', () => ({
 			getRows: vi.fn(() => 25),
 			getDoc: vi.fn(() => ({ palette: new Uint32Array(16) })),
 			redrawEntireImage: vi.fn(),
+			journalKeyframe: vi.fn(),
 		},
 		chat: {
 			addConversation: vi.fn(),
@@ -103,9 +105,14 @@ vi.mock('../../src/js/client/palette.js', () => ({
 	createPalette: vi.fn(() => ({})),
 }));
 
+// the stub below hides jsdom, which the comment box tests still need
+// for a real textarea
+const jsdom = document;
+
 vi.stubGlobal('document', {
 	getElementsByClassName: vi.fn(() => []),
 	addEventListener: vi.fn(),
+	removeEventListener: vi.fn(),
 	createElement: vi.fn(() => ({
 		classList: { add: vi.fn() },
 		textContent: '',
@@ -1235,6 +1242,56 @@ describe('Network Module', () => {
 				}
 			});
 
+			it('time the page spends hidden does not count toward the glyph wait', async () => {
+				vi.useFakeTimers();
+				const live = new Set();
+				document.addEventListener.mockImplementation((type, fn) => {
+					if (type === 'visibilitychange') {
+						live.add(fn);
+					}
+				});
+				document.removeEventListener.mockImplementation((_type, fn) => live.delete(fn));
+				const turn = hidden => {
+					document.hidden = hidden;
+					live.forEach(fn => fn());
+				};
+				try {
+					const handler = createWorkerHandler(mockInputHandle);
+					await join(handler);
+					emulateDraws();
+					const slow = holdGlyphs();
+					const landing = frame(T0wnzAction.EXT_DRAW, { ...cell(0, 0, 0x2603), seq: 6, id: 2 });
+					await slow.loading;
+					mockWorker.postMessage.mockClear();
+					await vi.advanceTimersByTimeAsync(9000);
+					turn(true);
+					await vi.advanceTimersByTimeAsync(60000);
+					turn(false);
+					await vi.advanceTimersByTimeAsync(900);
+					slow.finish();
+					await landing;
+					expect(drawn).toEqual([[[0, 0, 0x2603]]]);
+					expect(sent()).toEqual([]);
+					// visible time still runs the wait out
+					const stuck = holdGlyphs();
+					const dropping = frame(T0wnzAction.EXT_DRAW, { ...cell(1, 0, 0x2603), seq: 7, id: 2 });
+					await stuck.loading;
+					await vi.advanceTimersByTimeAsync(4000);
+					turn(true);
+					await vi.advanceTimersByTimeAsync(60000);
+					turn(false);
+					await vi.advanceTimersByTimeAsync(6000);
+					await dropping;
+					expect(drawn).toEqual([[[0, 0, 0x2603]]]);
+					expect(sent()).toEqual([{ type: T0wnzAction.EXT_SYNC, data: {} }]);
+				} finally {
+					delete document.hidden;
+					document.addEventListener.mockReset();
+					document.removeEventListener.mockReset();
+					vi.useRealTimers();
+				}
+			});
+
 			it('a frame that throws leaves the frames behind it flowing', async () => {
 				const handler = createWorkerHandler(mockInputHandle);
 				await join(handler);
@@ -1251,6 +1308,45 @@ describe('Network Module', () => {
 				expect(console.warn).toHaveBeenCalledWith('[Network] dropped malformed EXT_SYNC:', expect.anything());
 				expect(State.textArtCanvas.setIceColors).toHaveBeenCalledWith(true);
 			});
+		});
+
+		it('the timelapse request waits out only the time the page shows', async () => {
+			vi.useFakeTimers();
+			const live = new Set();
+			document.addEventListener.mockImplementation((type, fn) => {
+				if (type === 'visibilitychange') {
+					live.add(fn);
+				}
+			});
+			document.removeEventListener.mockImplementation((_type, fn) => live.delete(fn));
+			const turn = hidden => {
+				document.hidden = hidden;
+				live.forEach(fn => fn());
+			};
+			try {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler);
+				const answered = handler.requestTimelapse();
+				await vi.advanceTimersByTimeAsync(9000);
+				turn(true);
+				await vi.advanceTimersByTimeAsync(60000);
+				turn(false);
+				await frame(T0wnzAction.EXT_TIMELAPSE, { ops: []});
+				expect(await answered).toEqual({ ops: []});
+				expect(live.size).toBe(0);
+				const silent = handler.requestTimelapse();
+				await vi.advanceTimersByTimeAsync(4000);
+				turn(true);
+				await vi.advanceTimersByTimeAsync(60000);
+				turn(false);
+				await vi.advanceTimersByTimeAsync(6000);
+				expect(await silent).toBeNull();
+			} finally {
+				delete document.hidden;
+				document.addEventListener.mockReset();
+				document.removeEventListener.mockReset();
+				vi.useRealTimers();
+			}
 		});
 
 		describe('room SAUCE', () => {
@@ -1363,6 +1459,118 @@ describe('Network Module', () => {
 				State.title = '';
 				handler.sendSauce({ ...room, title: '' });
 				expect(State.title).toBe('collab mode');
+			});
+
+			const close = () => listenerOf()({ data: { cmd: 'closed', wasConnected: true } });
+
+			it('leaving an untitled room titles the page Untitled and tells the sidebar', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				State.title = 'mine';
+				await join(handler, { caps: []});
+				const events = sauceEvents();
+				await close();
+				expect(State.title).toBe('Untitled');
+				expect(sauceEvents()).toBe(events + 1);
+			});
+
+			it('leaving a titled room keeps the title whose SAUCE stays', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler, { caps: [], doc: room });
+				await close();
+				expect(State.title).toBe('room title');
+				expect(editor()).toEqual(room);
+			});
+
+			it('a join that fails after the room SAUCE landed leaves no placeholder title', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				vi.mocked(websocketUI).mockImplementationOnce(() => {
+					throw new Error('toolbar failed');
+				});
+				await join(handler, { caps: []});
+				expect(handler.isConnected()).toBe(false);
+				expect(State.title).toBe('Untitled');
+			});
+
+			it('leaving a session journals the doc it left on screen', async () => {
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler);
+				expect(State.textArtCanvas.journalKeyframe).not.toHaveBeenCalled();
+				await close();
+				expect(State.textArtCanvas.journalKeyframe).toHaveBeenCalledTimes(1);
+				// a dial that never became a session has nothing to journal
+				handler.joinCollaboration();
+				await close();
+				handler.stayLocal();
+				expect(State.textArtCanvas.journalKeyframe).toHaveBeenCalledTimes(1);
+			});
+
+			describe('while the Sauce Editor is open', () => {
+				it('a peer edit and a resync wait, and the latest lands when it closes', async () => {
+					const handler = createWorkerHandler(mockInputHandle);
+					await join(handler);
+					State.title = 'local';
+					handler.holdSauce();
+					typeInEditor(ours);
+					const events = sauceEvents();
+					await frame(MoebiusAction.SAUCE, { ...room, title: 'peer title', seq: 6, id: 2 });
+					await sync({ ...room, seq: 7 });
+					expect(editor()).toEqual(ours);
+					expect(State.title).toBe('local');
+					expect(sauceEvents()).toBe(events);
+					handler.releaseSauce();
+					expect(editor()).toEqual(room);
+					expect(State.title).toBe('room title');
+					expect(sauceEvents()).toBe(events + 1);
+					// closed, the room lands at once
+					await frame(MoebiusAction.SAUCE, { ...room, title: 'later', seq: 8, id: 2 });
+					expect(State.title).toBe('later');
+				});
+
+				it('a Save sends ours over a held room SAUCE, which never lands', async () => {
+					const handler = createWorkerHandler(mockInputHandle);
+					await join(handler);
+					handler.holdSauce();
+					typeInEditor(ours);
+					await sync(room);
+					mockWorker.postMessage.mockClear();
+					handler.sendSauce(editor());
+					handler.releaseSauce();
+					expect(sent()).toEqual([{ type: MoebiusAction.SAUCE, data: ours }]);
+					expect(editor()).toEqual(ours);
+					expect(State.title).toBe('our title');
+				});
+
+				it('a dropped session forgets the held room SAUCE', async () => {
+					const handler = createWorkerHandler(mockInputHandle);
+					await join(handler, { caps: []});
+					handler.holdSauce();
+					typeInEditor(ours);
+					await frame(MoebiusAction.SAUCE, { ...room, id: 2 });
+					await close();
+					handler.releaseSauce();
+					expect(editor()).toEqual(ours);
+					expect(State.title).toBe('Untitled');
+				});
+
+				it('a join is a new document and adopts the room SAUCE regardless', async () => {
+					const handler = createWorkerHandler(mockInputHandle);
+					handler.holdSauce();
+					await join(handler, { caps: [], doc: room });
+					expect(editor()).toEqual(room);
+					expect(State.title).toBe('room title');
+				});
+			});
+
+			it('a room comment of one blank line fills an empty box and Done sends it back', async () => {
+				fields.sauceComments = jsdom.createElement('textarea');
+				const handler = createWorkerHandler(mockInputHandle);
+				await join(handler, { caps: [], doc: room });
+				await frame(MoebiusAction.SAUCE, { ...room, comments: ' ', id: 2 });
+				expect(fields.sauceComments.value).toBe('');
+				mockWorker.postMessage.mockClear();
+				handler.sendSauce({ ...room, comments: Load.commentsOf(fields.sauceComments) });
+				const blankLine = { ...room, comments: ' ' };
+				expect(sent()).toEqual([{ type: MoebiusAction.SAUCE, data: blankLine }]);
 			});
 		});
 

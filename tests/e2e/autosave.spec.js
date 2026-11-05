@@ -6,6 +6,7 @@ import {
 	clickViewToggle,
 	drag,
 	loadSettled,
+	openMenu,
 	parkToolSettings,
 	readBlock,
 	readRegion,
@@ -178,6 +179,55 @@ test.describe('Autosave across reloads', () => {
 		await reload(page);
 		expect(await digest(page, 'live')).toBe(saved);
 		expect(await readRegion(page, 10, 5, 13, 5)).toEqual(['  AB']);
+	});
+
+	test('a floating move stepped just before a reload keeps that step', async ({ page, browserName }) => {
+		// the IndexedDB journal appends across tasks, and WebKit unloads
+		// first; OPFS posts the record to its worker in the step's task
+		test.skip(browserName === 'webkit', 'the IndexedDB journal loses the race');
+		await writeText(page, 10, 5, 'AB');
+		await page.locator('#selection').click();
+		await drag(page, [10, 5], [11, 5]);
+		await keyframed(page);
+		await page.keyboard.press('m');
+		await expect(page.locator('#moveBlocks')).toHaveClass(/enabled/);
+		await page.keyboard.press('ArrowRight');
+		await expect.poll(() => digest(page, 'journal')).toBe(await digest(page, 'live'));
+		// no idle runs before the reload: only the page leaving journals it
+		await page.keyboard.press('ArrowRight');
+
+		await reload(page);
+		expect(await readRegion(page, 10, 5, 13, 5)).toEqual(['  AB']);
+	});
+
+	test('Update Editor with no update waiting clears the art, and a later settings save brings none back', async ({ page }) => {
+		await halfblock(page, [[3, 2], [10, 4]]);
+		await persisted(page, false);
+		await openMenu(page);
+		await page.locator('#update').click();
+		await expect(page.locator('#updateModal')).toBeVisible();
+		await Promise.all([
+			page.waitForEvent('load'),
+			page.locator('#updateReload').click(),
+		]);
+		await boot(page);
+		expect((await readBlock(page, 3, 2)).charCode).toBe(0);
+
+		// a font pick saves settings over the blank canvas and journals
+		// nothing
+		await page.locator('#changeFont').click();
+		await page.locator('#font-topaz-437-8x16').click();
+		await page.locator('#fontsApply').click();
+		await expect
+			.poll(() =>
+				page.evaluate(
+					() => JSON.parse(localStorage.getItem('text0wnz-settings'))?.fontName,
+				))
+			.toBe('Topaz-437 8x16');
+
+		await reload(page);
+		expect((await readBlock(page, 3, 2)).charCode).toBe(0);
+		expect((await readBlock(page, 10, 4)).charCode).toBe(0);
 	});
 
 	test('a resize and a new frame come back', async ({ page }) => {

@@ -99,6 +99,8 @@ const mockCreateFunctions = {
 		open: vi.fn(),
 		close: vi.fn(),
 		error: vi.fn(),
+		loading: vi.fn(),
+		onClose: vi.fn(),
 	})),
 	createDefaultPalette: vi.fn(() => mockState.palette),
 	createPalettePreview: vi.fn(() => ({ updatePreview: vi.fn() })),
@@ -212,20 +214,27 @@ vi.mock('../../src/js/client/toolbar.js', () => ({
 		switchTool: vi.fn(),
 	},
 }));
-vi.mock('../../src/js/client/file.js', () => ({
-	Load: {
-		file: vi.fn(),
-		sauceToAppFont: vi.fn(),
-		resetSauceFlags: vi.fn(),
-	},
-	Save: {
-		ans: vi.fn(),
-		utf8: vi.fn(),
-		bin: vi.fn(),
-		xb: vi.fn(),
-		png: vi.fn(),
-	},
-}));
+// the comment box helpers stay real: the SAUCE dialog tests read and
+// fill a jsdom textarea through them
+vi.mock('../../src/js/client/file.js', async importOriginal => {
+	const { Load } = await importOriginal();
+	return {
+		Load: {
+			file: vi.fn(),
+			sauceToAppFont: vi.fn(),
+			resetSauceFlags: vi.fn(),
+			fillComments: Load.fillComments,
+			commentsOf: Load.commentsOf,
+		},
+		Save: {
+			ans: vi.fn(),
+			utf8: vi.fn(),
+			bin: vi.fn(),
+			xb: vi.fn(),
+			png: vi.fn(),
+		},
+	};
+});
 
 vi.mock('../../src/js/client/font.js', () => ({
 	loadFontFromImage: vi.fn((_name, _spacing, _palette) => {
@@ -485,6 +494,18 @@ describe('Main Application Module', () => {
 			expect(mockState.textArtCanvas.clear).toHaveBeenCalled();
 		});
 
+		it('New covers the warning with the loading veil before it starts', async () => {
+			const { confirmNew } = await bootToResizeDialog();
+			let veiled = false;
+			Object.assign(mockState.textArtCanvas, {
+				clearXBData: vi.fn(() => {
+					veiled = mockState.modal.loading.mock.calls.length > 0;
+				}),
+			});
+			await confirmNew();
+			expect(veiled).toBe(true);
+		});
+
 		it('alerts and keeps the size past the column or row limit', async () => {
 			const { resize: apply } = await bootToResizeDialog();
 			const { MAX_COLUMNS, MAX_ROWS } = magicNumbers;
@@ -531,8 +552,8 @@ describe('Main Application Module', () => {
 	describe('SAUCE dialog', () => {
 		const halt = new Error('halt after the SAUCE dialog');
 
-		// the real onReturn takes the Comments binding main.js made, on a
-		// jsdom textarea, with Done standing in for the button
+		// the real onReturn takes the Comments binding main.js made, on
+		// jsdom fields, with Done standing in for the button
 		const bootToSauceDialog = async () => {
 			const { onClick, onReturn } = await import('../../src/js/client/ui.js');
 			// ui.js binds its query helpers to the document at load
@@ -541,7 +562,13 @@ describe('Main Application Module', () => {
 			const real = await vi.importActual('../../src/js/client/ui.js');
 			vi.stubGlobal('document', stub);
 			const comments = jsdom.createElement('textarea');
-			const els = { sauceComments: comments, sauceDone: createMockElement() };
+			const fields = {
+				sauceTitle: jsdom.createElement('input'),
+				sauceAuthor: jsdom.createElement('input'),
+				sauceGroup: jsdom.createElement('input'),
+				sauceComments: comments,
+			};
+			const els = { ...fields, sauceDone: createMockElement(), navSauce: createMockElement() };
 			const $ = global.document.getElementById;
 			const lookup = $.getMockImplementation();
 			$.mockImplementation(id => els[id] ?? lookup(id));
@@ -564,14 +591,15 @@ describe('Main Application Module', () => {
 				$.mockImplementation(lookup);
 				vi.mocked(onReturn).mockReset();
 			}
-			const done = vi.mocked(onClick).mock.calls.find(
-				([target]) => target === els.sauceDone,
-			)[1];
+			const handler = el =>
+				vi.mocked(onClick).mock.calls.find(([target]) => target === el)[1];
+			const done = handler(els.sauceDone);
 			els.sauceDone.click = () => done();
 			real.onReturn(...binding);
 			comments.value = 'greets';
 			comments.setSelectionRange(6, 6);
-			return comments;
+			const { Load } = await import('../../src/js/client/file.js');
+			return { comments, fields, done, openEditor: handler(els.navSauce), Load };
 		};
 
 		// jsdom runs no default actions: a keydown nobody cancels goes on
@@ -599,7 +627,11 @@ describe('Main Application Module', () => {
 		};
 
 		beforeEach(() => {
-			mockState.network = { sendSauce: vi.fn() };
+			mockState.network = {
+				sendSauce: vi.fn(),
+				holdSauce: vi.fn(),
+				releaseSauce: vi.fn(),
+			};
 		});
 
 		afterEach(() => {
@@ -608,7 +640,7 @@ describe('Main Application Module', () => {
 
 		it('Shift+Enter in Comments types a line break and keeps the dialog open', async () => {
 			const { enforceMaxBytes } = await import('../../src/js/client/ui.js');
-			const comments = await bootToSauceDialog();
+			const { comments } = await bootToSauceDialog();
 			pressEnter(comments, { shiftKey: true });
 			expect(comments.value).toBe('greets\n');
 			expect(enforceMaxBytes).toHaveBeenCalled();
@@ -617,13 +649,238 @@ describe('Main Application Module', () => {
 		});
 
 		it('plain Enter in Comments saves and closes', async () => {
-			const comments = await bootToSauceDialog();
+			const { comments } = await bootToSauceDialog();
 			pressEnter(comments);
 			expect(comments.value).toBe('greets');
 			expect(mockState.network.sendSauce).toHaveBeenCalledWith(
 				expect.objectContaining({ comments: 'greets' }),
 			);
 			expect(mockState.modal.close).toHaveBeenCalled();
+		});
+
+		// the modal runs its onClose handler on any close: Cancel, the
+		// backdrop, Escape, and Done's own close
+		const closeEditor = () => mockState.modal.onClose.mock.lastCall[0]();
+		const typeIn = fields => {
+			fields.sauceTitle.value = 'typed title';
+			fields.sauceAuthor.value = 'typed author';
+			fields.sauceComments.value = 'typed comments';
+			fields.sauceComments.dispatchEvent(new window.Event('input'));
+		};
+
+		it('a close without Done puts back what the editor opened with, then lets the room SAUCE land', async () => {
+			const { fields, openEditor, Load } = await bootToSauceDialog();
+			fields.sauceTitle.value = 'opened title';
+			Load.fillComments(fields.sauceComments, ' ');
+			openEditor();
+			expect(mockState.network.holdSauce).toHaveBeenCalledTimes(1);
+			typeIn(fields);
+			let landedOver;
+			mockState.network.releaseSauce.mockImplementation(() => {
+				landedOver = [
+					fields.sauceTitle.value,
+					fields.sauceAuthor.value,
+					Load.commentsOf(fields.sauceComments),
+				];
+			});
+			closeEditor();
+			expect(landedOver).toEqual(['opened title', '', ' ']);
+			expect(fields.sauceComments.value).toBe('');
+			expect(mockState.network.sendSauce).not.toHaveBeenCalled();
+		});
+
+		it('Done keeps what the editor holds, and its close lets the room SAUCE go', async () => {
+			const { fields, openEditor, done } = await bootToSauceDialog();
+			openEditor();
+			typeIn(fields);
+			done();
+			closeEditor();
+			expect(mockState.network.sendSauce).toHaveBeenCalledWith({
+				title: 'typed title',
+				author: 'typed author',
+				group: '',
+				comments: 'typed comments',
+			});
+			expect(fields.sauceTitle.value).toBe('typed title');
+			expect(mockState.network.releaseSauce).toHaveBeenCalledTimes(1);
+		});
+
+		it('a document that opens under the editor is what a close puts back', async () => {
+			const { fields, openEditor } = await bootToSauceDialog();
+			openEditor();
+			fields.sauceTitle.value = 'opened file';
+			for (const [type, listener] of global.document.addEventListener.mock.calls) {
+				if (type === 'onNewDocument') {
+					listener();
+				}
+			}
+			typeIn(fields);
+			closeEditor();
+			expect(fields.sauceTitle.value).toBe('opened file');
+			expect(fields.sauceAuthor.value).toBe('');
+			expect(mockState.network.releaseSauce).toHaveBeenCalledTimes(1);
+		});
+
+		it('Done sends a kept blank comment line as one blank line', async () => {
+			const { fields, done, Load } = await bootToSauceDialog();
+			Load.fillComments(fields.sauceComments, ' ');
+			done();
+			expect(mockState.network.sendSauce).toHaveBeenCalledWith(
+				expect.objectContaining({ comments: ' ' }),
+			);
+		});
+	});
+
+	describe('share target', () => {
+		// boots with ?source=share over a share cache holding the given
+		// response; the restore choice comes first, so wherever the mocks
+		// end the boot is late enough
+		const bootShared = async (
+			response,
+			open = async () => ({ match: async () => response, delete: async () => true }),
+		) => {
+			globalThis.caches = { open: vi.fn(open) };
+			window.history.replaceState(null, '', '/?source=share');
+			let boot;
+			mockState.waitFor.mockImplementationOnce((_deps, ready) => {
+				boot = ready().then(() => null, error => error);
+			});
+			try {
+				await domReady();
+				await vi.advanceTimersByTimeAsync(100);
+				await boot;
+			} finally {
+				window.history.replaceState(null, '', '/');
+				delete globalThis.caches;
+			}
+		};
+
+		it('a shared file wins over the autosave restore, as a launch file does', async () => {
+			await bootShared({
+				headers: { get: name => (name === 'X-Filename' ? 'shared.ans' : null) },
+				blob: async () => new Blob(['HI']),
+			});
+			expect(mockState.restoreStateFromLocalStorage).not.toHaveBeenCalled();
+		});
+
+		it('a share launch with nothing cached restores the autosave', async () => {
+			await bootShared(undefined);
+			expect(mockState.restoreStateFromLocalStorage).toHaveBeenCalledTimes(1);
+		});
+
+		it('a share launch whose lookup fails restores the autosave', async () => {
+			await bootShared(undefined, async () => {
+				throw new Error('storage blocked');
+			});
+			expect(mockState.restoreStateFromLocalStorage).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe('update prompt', () => {
+		// a worker already waiting when the page registers, under
+		// whatever modal the test says is showing
+		let showing;
+		let reg;
+		const bootWaiting = async () => {
+			reg = { waiting: { postMessage: vi.fn() } };
+			navigator.serviceWorker = {
+				controller: {},
+				register: vi.fn(async () => reg),
+				addEventListener: vi.fn(),
+			};
+			const base = mockCreateFunctions.createModalController.getMockImplementation();
+			mockCreateFunctions.createModalController.mockImplementationOnce(() => ({
+				...base(),
+				current: vi.fn(() => showing),
+			}));
+			await domReady();
+			await vi.advanceTimersByTimeAsync(0);
+		};
+		const offered = () =>
+			mockState.modal.open.mock.calls.filter(([name]) => name === 'update').length;
+
+		afterEach(() => {
+			reg.waiting = null;
+			delete navigator.serviceWorker;
+		});
+
+		it('opens at once when no modal is showing', async () => {
+			showing = false;
+			await bootWaiting();
+			expect(offered()).toBe(1);
+		});
+
+		it('waits out every modal the user opens first, then opens once', async () => {
+			showing = 'sauce';
+			await bootWaiting();
+			await vi.advanceTimersByTimeAsync(3000);
+			expect(offered()).toBe(0);
+			showing = 'charset';
+			await vi.advanceTimersByTimeAsync(3000);
+			showing = 'resize';
+			await vi.advanceTimersByTimeAsync(3000);
+			expect(offered()).toBe(0);
+			showing = false;
+			await vi.advanceTimersByTimeAsync(1000);
+			expect(offered()).toBe(1);
+			await vi.advanceTimersByTimeAsync(5000);
+			expect(offered()).toBe(1);
+		});
+
+		it('an update question already showing is not asked again once dismissed', async () => {
+			showing = 'update';
+			await bootWaiting();
+			await vi.advanceTimersByTimeAsync(2000);
+			showing = false;
+			await vi.advanceTimersByTimeAsync(5000);
+			expect(offered()).toBe(0);
+		});
+
+		it('takes the collab invitation\'s place, which the modal hands back', async () => {
+			showing = 'choice';
+			await bootWaiting();
+			expect(offered()).toBe(1);
+		});
+	});
+
+	describe('recovery reset', () => {
+		const halt = new Error('halt after the reset button');
+
+		it('reloads once its bound runs out, even when storage never answers', async () => {
+			const { onClick, onReturn } = await import('../../src/js/client/ui.js');
+			const button = createMockElement();
+			const $ = global.document.getElementById;
+			const lookup = $.getMockImplementation();
+			$.mockImplementation(id => (id === 'updateReload' ? button : lookup(id)));
+			vi.mocked(onReturn).mockImplementation(el => {
+				if (el === button) {
+					throw halt;
+				}
+			});
+			let boot;
+			mockState.waitFor.mockImplementationOnce((_deps, ready) => {
+				boot = ready().then(() => null, error => error);
+			});
+			const page = globalThis.window;
+			const reload = vi.fn();
+			try {
+				await domReady();
+				await vi.advanceTimersByTimeAsync(100);
+				expect(await boot).toBe(halt);
+				const reset = vi.mocked(onClick).mock.calls.find(([el]) => el === button)[1];
+				mockState.clearLocalStorage.mockReturnValueOnce(new Promise(() => {}));
+				mockState.textArtCanvas.stopJournal = vi.fn(async () => {});
+				vi.stubGlobal('window', { location: { reload } });
+				reset();
+				await vi.advanceTimersByTimeAsync(2999);
+				expect(reload).not.toHaveBeenCalled();
+				await vi.advanceTimersByTimeAsync(1);
+				expect(reload).toHaveBeenCalledTimes(1);
+			} finally {
+				vi.stubGlobal('window', page);
+				$.mockImplementation(lookup);
+				vi.mocked(onReturn).mockReset();
+			}
 		});
 	});
 

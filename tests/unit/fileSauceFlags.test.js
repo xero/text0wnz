@@ -2,7 +2,7 @@
  * Runs under real jsdom so the file.js onLetterSpacingChange listener
  * is live, unlike the corpus harness whose document stub drops it.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mocks = vi.hoisted(() => {
 	const ui = {
@@ -119,6 +119,48 @@ describe('SAUCE text lifecycle', () => {
 		const comnt = bytes =>
 			Array.from(bytes.subarray(bytes.length - 128 - 5 - 3 * 64, bytes.length - 128));
 		expect(comnt(savedBytes)).toEqual(comnt(original));
+	});
+
+	describe('a comment block of one blank line', () => {
+		// PabloDraw shows it as an empty box and keeps the line until the
+		// box is edited (SauceInfoDialog.cs, SauceInfo.cs SauceComment.Save)
+		const box = mocks.ui.sauceComments;
+		beforeEach(() => {
+			mocks.ui.sauceComments = document.createElement('textarea');
+		});
+		afterEach(() => {
+			mocks.ui.sauceComments = box;
+		});
+		const openBlankLine = () =>
+			openAndWire(
+				'blank.ans',
+				makeAnsi({ columns: 80, rows: 5, seed: 2, sauce: { tinfo1: 80, tinfo2: 5, comments: ['']} }),
+			);
+
+		it('opens as an empty box and saves back as one blank line', async () => {
+			await openBlankLine();
+			expect(mocks.ui.sauceComments.value).toBe('');
+			expect((await saved()).comments).toEqual(['']);
+		});
+
+		it('an edit drops the kept line', async () => {
+			await openBlankLine();
+			const comments = mocks.ui.sauceComments;
+			comments.value = 'x';
+			comments.dispatchEvent(new Event('input'));
+			comments.value = '';
+			comments.dispatchEvent(new Event('input'));
+			expect((await saved()).comments).toEqual([]);
+		});
+
+		it('another file\'s comments replace the kept line', async () => {
+			await openBlankLine();
+			await openAndWire(
+				'plain.ans',
+				makeAnsi({ columns: 80, rows: 5, seed: 2, sauce: { tinfo1: 80, tinfo2: 5 } }),
+			);
+			expect((await saved()).comments).toEqual([]);
+		});
 	});
 });
 

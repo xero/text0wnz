@@ -272,11 +272,11 @@ System paste reads the OS clipboard as plain text and refuses content wider than
 **Features:**
 
 - Search blocks by name and preview which glyphs the bundled fonts cover
-- Click a glyph to insert it at the cursor
+- Click a glyph to insert it at the cursor. A character CP437 has inserts as its CP437 code and draws from the active font, like an imported page
 - **Import charset** takes a durdraw `.ini` (a `[Character Set]` section with `name:`, then `[block N]` sections holding `f1:` to `f12:`) or a teXt0wnz `.json` (`{ "name": "...", "pages": [["░", "▒", ...], ...] }`). Pages hold 12 characters, and the format is sniffed from the content, not the extension
 - Imported pages ride the F-key bar and persist between sessions. Characters CP437 can express draw from the active font; the rest stay unicode
 
-Unicode glyphs render from [unscii-16](http://viznut.fi/unscii/) (purpose-built for textmode art) with [GNU Unifont](https://unifoundry.com/unifont/) covering the rest. A glyph neither font covers renders as a hollow box and inserts as `?`.
+Unicode glyphs render from [unscii-16](http://viznut.fi/unscii/) (purpose-built for textmode art) with [GNU Unifont](https://unifoundry.com/unifont/) covering the rest. A glyph neither font covers renders as a hollow box and inserts as `?`. A glyph whose font block has not loaded within 10 seconds of typing it also inserts as `?`.
 
 > [!NOTE]
 > On a classic collaboration server the wire only speaks CP437, so unicode input locks while connected. The picker says so when it applies.
@@ -473,6 +473,8 @@ Full text input with navigation controls. Type characters directly onto the canv
 | `backspace`            | Erase the cell to the left                  |
 | `enter`                | New line                                    |
 
+With a button, slider, or other control reached by `tab`, `enter`, `space`, and the arrow keys work it, in keyboard mode and with the selection tool. After a mouse click on a control they stay canvas keys, and text fields like the frame delay keep every key. A tap on the canvas hands it these keys back. A button you clicked keeps leaving these keys to the canvas when a dialog or menu closing hands focus back to it. A slider reached by `tab` also keeps `home`, `end`, `page up`, and `page down`.
+
 ## Screen-Aware Navigation
 
 `Page Up` and `Page Down` automatically calculate movement based on the current viewport height and font size, allowing you to navigate large canvases one screen at a time without losing your bearings.
@@ -658,9 +660,9 @@ Draw rectangles, circles, and ellipses. Each tool's Mode pills and its Outline/F
 Select rectangular canvas areas for manipulation, copying, or transformation. A floating action bar sits over the selection with its size readout.
 
 > [!NOTE]
-> A single click selects one cell; drag to grow the selection. Press `escape` or **Deselect** to clear it.
+> A single click selects one cell; drag to grow the selection. Press `escape` or **Deselect** to clear it. The keyboard cursor moves to where the selection was.
 >
-> Picking the tool brings back your last selection. With none to bring back, it opens with nothing selected. While nothing is selected, a shortcut below that acts on a selection first selects the cell under the keyboard cursor, so `ctrl v` right after you pick the tool pastes where you were typing.
+> Picking the tool brings back your last selection, unless you cleared it. With none to bring back, it opens with nothing selected. While nothing is selected, a shortcut below that acts on a selection first selects the cell under the keyboard cursor, so `ctrl v` right after you pick the tool pastes where you were typing.
 
 **Action Bar:**
 
@@ -671,7 +673,7 @@ A bar floats above the selection (below it when there is no headroom) and follow
 - **Move** toggles move mode (`m`)
 - **Cut**, **Delete**, and **Copy** act on the contents
 - **Paste** opens a submenu: **Paste**, **Transparent**, **Under**, **System**, and **Back**
-- **Deselect** clears the selection (`escape`)
+- **Deselect** clears the selection (`escape`) and parks the keyboard cursor at its top left corner
 
 **Selection Modes:**
 
@@ -684,6 +686,8 @@ Move mode is orange (toggle with `m` key):
 ![move](https://raw.githubusercontent.com/wiki/xero/text0wnz/img/move.png)
 
 Blank cells in the selection move transparently, like paste transparent: artwork under the empty parts of the rect shows through and survives the move. A cell counts as blank when it is empty (char 0, space, or nbsp) on a black background, the same rule the paste modes use.
+
+`[` and `]` during a move flip the moving block, and the flip is part of the move's one undo step.
 
 **Keyboard Shortcuts:**
 
@@ -1074,6 +1078,8 @@ To join a server anywhere else, click the collab button in the sauce panel; it r
 A refusal or a dead server reports in the form. Vanilla Moebius servers are plaintext, so from an https page the editor goes through the site's bridge when the host allows it, and says so when it does not; see [collab-protocol-migration.md](./collab-protocol-migration.md). The launch invitation names the server a link chose for you.
 
 - Everyone in a session draws on the same canvas in real time, with live peer cursors, synced fonts, canvas sizes, iCE colors, and SAUCE metadata
+- A collaborator's SAUCE edit waits while your Sauce Editor is open: **Save** sends yours over it, and **Cancel** shows theirs
+- Leaving a session keeps what is on screen as your local document and autosave, titled `Untitled` when the room had no title
 - Between teXt0wnz clients, unicode characters and extended colors travel natively
 - Classic Moebius clients can join the same session; the server down-converts extended cells to their nearest 16-color CP437 equivalents for them, so mixed rooms stay coherent
 - Connected to a classic server, the editor locks what that wire cannot carry: extended colors, unicode input, and animation editing disable while connected, and each panel says so

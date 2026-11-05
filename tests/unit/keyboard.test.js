@@ -7,8 +7,10 @@ import {
 	createSelectionTool,
 } from '../../src/js/client/keyboard.js';
 import { createFKeys } from '../../src/js/client/fkeys.js';
-import { isTextEntry } from '../../src/js/client/ui.js';
 import State from '../../src/js/client/state.js';
+import Toolbar from '../../src/js/client/toolbar.js';
+import { cp437ToUnicode } from '../../src/js/core/cp437.js';
+import { tokenizePasteText } from '../../src/js/core/paste.js';
 
 // every test gets fresh State mocks: tests rewire them in place, so a
 // shared object leaks one test's canvas size or draw hook into the next
@@ -93,7 +95,6 @@ vi.mock('../../src/js/client/toolbar.js', () => ({
 }));
 
 vi.mock('../../src/js/client/ui.js', () => ({
-	isTextEntry: vi.fn(() => false),
 	$: vi.fn(id => {
 		const element = document.createElement('canvas');
 		element.id = id;
@@ -176,6 +177,13 @@ describe('Keyboard Utilities', () => {
 		vi.restoreAllMocks();
 	});
 
+	// a click focuses the button between the press and the release
+	const clickFocus = element => {
+		element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+		element.focus();
+		element.dispatchEvent(new Event('pointerup', { bubbles: true }));
+	};
+
 	describe('Module Exports', () => {
 		it('should export all expected keyboard functions', () => {
 			expect(createFKeys).toBeDefined();
@@ -237,10 +245,8 @@ describe('Keyboard Utilities', () => {
 		});
 
 		it('F1-F12 type from the shades and blocks page, never with Ctrl', () => {
-			const typed = [];
-			State.textArtCanvas.draw.mockImplementation(writer =>
-				writer(code => typed.push(code)));
-			const controller = createFKeys();
+			const insert = vi.fn();
+			const controller = createFKeys(insert, () => false);
 			controller.enable();
 			['F1', 'F4', 'F12'].forEach(code =>
 				document.dispatchEvent(new KeyboardEvent('keydown', { code })));
@@ -248,7 +254,24 @@ describe('Keyboard Utilities', () => {
 				new KeyboardEvent('keydown', { code: 'F2', ctrlKey: true }),
 			);
 			controller.disable();
-			expect(typed).toEqual([176, 219, 32]);
+			expect(insert.mock.calls).toEqual([[176], [219], [32]]);
+		});
+
+		it('F-keys pressed in a text entry stay in the field', () => {
+			const insert = vi.fn();
+			const input = document.createElement('input');
+			document.body.appendChild(input);
+			const controller = createFKeys(insert, t => t === input);
+			controller.enable();
+			const e = new KeyboardEvent('keydown', {
+				code: 'F1',
+				bubbles: true,
+				cancelable: true,
+			});
+			input.dispatchEvent(e);
+			controller.disable();
+			expect(e.defaultPrevented).toBe(false);
+			expect(insert).not.toHaveBeenCalled();
 		});
 
 		it('should add palette and font change listeners', () => {
@@ -642,6 +665,228 @@ describe('Keyboard Utilities', () => {
 			expect(drawn).toEqual([300]);
 		});
 
+		it('every CP437 glyph types as its byte', async () => {
+			const drawn = [];
+			State.textArtCanvas.draw = vi.fn(callback =>
+				callback(code => drawn.push(code)));
+			State.textArtCanvas.resolveUnicode = vi.fn(async () => new Map());
+			const bytes = Array.from({ length: 255 }, (_, i) => i + 1);
+			const controller = createKeyboardController();
+			controller.enable();
+			for (const byte of bytes) {
+				document.dispatchEvent(
+					new KeyboardEvent('keypress', { key: String.fromCodePoint(cp437ToUnicode(byte)) }),
+				);
+			}
+			await settle();
+			controller.disable();
+			expect(drawn).toEqual(bytes);
+			expect(State.textArtCanvas.resolveUnicode).not.toHaveBeenCalled();
+		});
+
+		it.each(['☺', '¶', '•', '←', '♥', '░', 'é', '☃'])(
+			'typed %s lands what a paste of it lands',
+			async ch => {
+				const drawn = [];
+				State.textArtCanvas.draw = vi.fn(callback =>
+					callback(code => drawn.push(code)));
+				State.textArtCanvas.resolveUnicode = vi.fn(
+					async codepoints => new Map([...codepoints].map(cp => [cp, ~cp])),
+				);
+				const controller = createKeyboardController();
+				controller.enable();
+				document.dispatchEvent(new KeyboardEvent('keypress', { key: ch }));
+				await settle();
+				controller.disable();
+				expect(drawn).toEqual(tokenizePasteText(ch).tokens);
+			},
+		);
+
+		describe('keys pressed in a text entry stay in the field', () => {
+			it.each([
+				['a digit', { key: '5', code: 'Digit5' }],
+				['Backspace', { key: 'Backspace', code: 'Backspace' }],
+				['Enter', { key: 'Enter', code: 'Enter' }],
+				['Space', { key: ' ', code: 'Space' }],
+				['Tab', { key: 'Tab', code: 'Tab' }],
+				['ArrowUp', { key: 'ArrowUp', code: 'ArrowUp' }],
+				['Home', { key: 'Home', code: 'Home' }],
+				['shift ArrowLeft', { key: 'ArrowLeft', code: 'ArrowLeft', shiftKey: true }],
+				['F1', { key: 'F1', code: 'F1' }],
+			])('%s', async (_, init) => {
+				const cursor = liveCursor(2, 3);
+				const field = document.createElement('input');
+				field.type = 'number';
+				document.body.appendChild(field);
+				field.focus();
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down, keypress } = press(field, init);
+				await settle();
+				controller.disable();
+				expect(down.defaultPrevented).toBe(false);
+				expect(keypress?.defaultPrevented ?? false).toBe(false);
+				expect(State.textArtCanvas.draw).not.toHaveBeenCalled();
+				expect(Toolbar.switchTool).not.toHaveBeenCalled();
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			});
+		});
+
+		describe('Space and the arrows on a focused control', () => {
+			let drawn;
+			let button;
+			let seen;
+			beforeEach(() => {
+				drawn = [];
+				State.textArtCanvas.draw = vi.fn(callback =>
+					callback(code => drawn.push(code)));
+				button = document.createElement('button');
+				document.body.appendChild(button);
+				// what the control's own handler sees, before the document's
+				seen = [];
+				button.addEventListener('keydown', e =>
+					seen.push(e.defaultPrevented));
+			});
+
+			it('Space on a control the keyboard reached is left to it', async () => {
+				const cursor = liveCursor(2, 3);
+				button.focus();
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down, keypress } = press(button, { key: ' ', code: 'Space' });
+				await settle();
+				controller.disable();
+				// an uncancelled keydown is what lets the browser press the
+				// button on keyup
+				expect(down.defaultPrevented).toBe(false);
+				expect(keypress?.defaultPrevented).toBe(false);
+				expect(drawn).toEqual([]);
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			});
+
+			it('Space on a control a pointer press focused types a space and cannot press it', async () => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				clickFocus(button);
+				const { down } = press(button, { key: ' ', code: 'Space' });
+				await settle();
+				controller.disable();
+				expect(down.defaultPrevented).toBe(true);
+				expect(drawn).toEqual([32]);
+				expect([cursor.getX(), cursor.getY()]).toEqual([3, 3]);
+			});
+
+			it.each([
+				['ArrowRight', {}],
+				['ArrowLeft', { shiftKey: true }],
+			])('%s on a control the keyboard reached is left to it', async (code, mods) => {
+				const cursor = liveCursor(2, 3);
+				button.focus();
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down } = press(button, { key: code, code, ...mods });
+				await settle();
+				controller.disable();
+				expect(seen).toEqual([false]);
+				expect(down.defaultPrevented).toBe(false);
+				expect(Toolbar.switchTool).not.toHaveBeenCalled();
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			});
+
+			it('an arrow on a control a pointer press focused reaches it cancelled and moves the cursor', async () => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				clickFocus(button);
+				press(button, { key: 'ArrowRight', code: 'ArrowRight' });
+				await settle();
+				controller.disable();
+				expect(seen).toEqual([true]);
+				expect([cursor.getX(), cursor.getY()]).toEqual([3, 3]);
+			});
+
+			it('cmd arrows stay canvas input on a control the keyboard reached', async () => {
+				const cursor = liveCursor(2, 3);
+				button.focus();
+				const controller = createKeyboardController();
+				controller.enable();
+				const { down } = press(button, {
+					key: 'ArrowRight',
+					code: 'ArrowRight',
+					metaKey: true,
+				});
+				await settle();
+				controller.disable();
+				expect(down.defaultPrevented).toBe(true);
+				expect([cursor.getX(), cursor.getY()]).toEqual([79, 3]);
+			});
+
+			describe('a range slider is a control, not a text field', () => {
+				let slider;
+				beforeEach(() => {
+					slider = document.createElement('input');
+					slider.type = 'range';
+					document.body.appendChild(slider);
+					seen = [];
+					slider.addEventListener('keydown', e =>
+						seen.push(e.defaultPrevented));
+				});
+
+				it('a clicked one leaves letters and arrows to the canvas', async () => {
+					const cursor = liveCursor(2, 3);
+					const controller = createKeyboardController();
+					controller.enable();
+					clickFocus(slider);
+					const { keypress } = press(slider, { key: 'a', code: 'KeyA' });
+					press(slider, { key: 'ArrowDown', code: 'ArrowDown' });
+					await settle();
+					controller.disable();
+					expect(keypress?.defaultPrevented).toBe(true);
+					expect(drawn).toEqual([97]);
+					// cancelled before the slider's own default steps it
+					expect(seen).toEqual([false, true]);
+					expect([cursor.getX(), cursor.getY()]).toEqual([3, 4]);
+				});
+
+				it('one the keyboard reached keeps its arrows', async () => {
+					const cursor = liveCursor(2, 3);
+					slider.focus();
+					const controller = createKeyboardController();
+					controller.enable();
+					const { down } = press(slider, {
+						key: 'ArrowRight',
+						code: 'ArrowRight',
+					});
+					await settle();
+					controller.disable();
+					expect(down.defaultPrevented).toBe(false);
+					expect(seen).toEqual([false]);
+					expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+				});
+
+				it.each([
+					['a slider', () => slider],
+					['a button', () => button],
+				])('Home, End, PageUp, and PageDown on %s the keyboard reached', async (name, control) => {
+					const cursor = liveCursor(40, 12);
+					control().focus();
+					const controller = createKeyboardController();
+					controller.enable();
+					const kept = ['Home', 'End', 'PageUp', 'PageDown'].map(
+						code => !press(control(), { key: code, code }).down.defaultPrevented,
+					);
+					await settle();
+					controller.disable();
+					// only a slider jumps on them; any other control leaves them
+					// to the canvas cursor
+					const slid = name === 'a slider';
+					expect(kept).toEqual(Array(4).fill(slid));
+					expect([cursor.getX(), cursor.getY()]).toEqual(slid ? [40, 12] : [79, 12]);
+				});
+			});
+		});
+
 		it('picks up colors on Ctrl+U through keydown', () => {
 			State.textArtCanvas.getBlock = vi.fn(() => ({
 				charCode: 65,
@@ -741,13 +986,6 @@ describe('Keyboard Utilities', () => {
 				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
 			},
 		);
-
-		// a click focuses the button between the press and the release
-		const clickFocus = element => {
-			element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
-			element.focus();
-			element.dispatchEvent(new Event('pointerup', { bubbles: true }));
-		};
 
 		it.each(['Enter', 'NumpadEnter'])(
 			'%s on a control a pointer press focused newlines',
@@ -948,7 +1186,7 @@ describe('Keyboard Utilities', () => {
 			expect(errSpy).toHaveBeenCalledTimes(1);
 		});
 
-		describe('Enter and Backspace behind a pending unicode glyph', () => {
+		describe('keys behind a pending unicode glyph', () => {
 			let drawn;
 			let release;
 
@@ -962,6 +1200,13 @@ describe('Keyboard Utilities', () => {
 							release = resolve;
 						}),
 				);
+			});
+
+			// the typing queue outlives a test: a gate a failed test left
+			// shut would stall every later queued key
+			afterEach(async () => {
+				release?.(new Map());
+				await settle();
 			});
 
 			it('Enter waits for the glyph to land', async () => {
@@ -995,6 +1240,75 @@ describe('Keyboard Utilities', () => {
 					{ code: 0, x: 2, y: 3 },
 				]);
 				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+			});
+
+			it.each([
+				['Tab', 9],
+				['F1', 176],
+			])('%s lands after the glyph', async (key, code) => {
+				liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				press(document.body, { key: '❤', code: 'Digit3' });
+				press(document.body, { key, code: key });
+				await settle();
+				expect(drawn).toEqual([]);
+				release(new Map([[0x2764, 300]]));
+				await settle();
+				controller.disable();
+				expect(drawn).toEqual([
+					{ code: 300, x: 2, y: 3 },
+					{ code, x: 3, y: 3 },
+				]);
+			});
+
+			it.each([
+				['ArrowDown', [3, 4]],
+				['Home', [0, 3]],
+			])('%s waits for the glyph to land', async (key, at) => {
+				const cursor = liveCursor(2, 3);
+				const controller = createKeyboardController();
+				controller.enable();
+				press(document.body, { key: '❤', code: 'Digit3' });
+				press(document.body, { key, code: key });
+				await settle();
+				expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+				release(new Map([[0x2764, 300]]));
+				await settle();
+				controller.disable();
+				expect(drawn).toEqual([{ code: 300, x: 2, y: 3 }]);
+				expect([cursor.getX(), cursor.getY()]).toEqual(at);
+			});
+
+			it('a glyph that does not resolve in 10 s lands as the substitute and the keys behind it move on', async () => {
+				vi.useFakeTimers();
+				// the wait counts visible time only
+				Object.defineProperty(document, 'hidden', {
+					configurable: true,
+					get: () => false,
+				});
+				try {
+					const cursor = liveCursor(2, 3);
+					const controller = createKeyboardController();
+					controller.enable();
+					press(document.body, { key: '❤', code: 'Digit3' });
+					press(document.body, { key: 'ArrowDown', code: 'ArrowDown' });
+					await vi.advanceTimersByTimeAsync(9999);
+					expect(drawn).toEqual([]);
+					expect([cursor.getX(), cursor.getY()]).toEqual([2, 3]);
+					await vi.advanceTimersByTimeAsync(1);
+					controller.disable();
+					expect(drawn).toEqual([{ code: 63, x: 2, y: 3 }]);
+					expect([cursor.getX(), cursor.getY()]).toEqual([3, 4]);
+					// a resolve past the wait draws nothing more
+					release(new Map([[0x2764, 300]]));
+					await vi.advanceTimersByTimeAsync(0);
+					expect(drawn).toEqual([{ code: 63, x: 2, y: 3 }]);
+					expect([cursor.getX(), cursor.getY()]).toEqual([3, 4]);
+				} finally {
+					delete document.hidden;
+					vi.useRealTimers();
+				}
 			});
 		});
 	});
@@ -1088,6 +1402,173 @@ describe('Keyboard Utilities', () => {
 
 			expect(() => tool.enable()).not.toThrow();
 			expect(() => tool.disable()).not.toThrow();
+		});
+
+		describe('Enter follows the keyboard tool rule', () => {
+			let tool;
+			let button;
+			const enter = (target, code = 'Enter') => {
+				const e = new KeyboardEvent('keydown', {
+					key: 'Enter',
+					code,
+					bubbles: true,
+					cancelable: true,
+				});
+				target.dispatchEvent(e);
+				return e;
+			};
+			beforeEach(() => {
+				button = document.createElement('button');
+				document.body.appendChild(button);
+				tool = createSelectionTool();
+				tool.enable();
+			});
+			afterEach(() => tool.disable());
+
+			it('Enter on a button the keyboard reached is left to the button', () => {
+				button.focus();
+				const e = enter(button);
+				expect(e.defaultPrevented).toBe(false);
+				expect(Toolbar.switchTool).not.toHaveBeenCalled();
+				expect(State.cursor.newLine).not.toHaveBeenCalled();
+			});
+
+			it('Enter on a button a pointer press focused returns to keyboard mode and newlines', () => {
+				clickFocus(button);
+				const e = enter(button);
+				expect(e.defaultPrevented).toBe(true);
+				expect(Toolbar.switchTool).toHaveBeenCalledWith('keyboard');
+				expect(State.cursor.newLine).toHaveBeenCalledOnce();
+			});
+
+			it('NumpadEnter returns to keyboard mode from the canvas', () => {
+				const e = enter(document.body, 'NumpadEnter');
+				expect(e.defaultPrevented).toBe(true);
+				expect(Toolbar.switchTool).toHaveBeenCalledWith('keyboard');
+				expect(State.cursor.newLine).toHaveBeenCalledOnce();
+			});
+		});
+
+		describe('the focused control rule', () => {
+			let tool;
+			let button;
+			let seen;
+			const arrow = init => {
+				const e = new KeyboardEvent('keydown', {
+					bubbles: true,
+					cancelable: true,
+					...init,
+				});
+				button.dispatchEvent(e);
+				return e;
+			};
+			beforeEach(() => {
+				State.selectionCursor = createSelectionCursor(document.createElement('div'));
+				State.selectionCursor.setStart(10, 5);
+				State.selectionCursor.setEnd(10, 5);
+				button = document.createElement('button');
+				document.body.appendChild(button);
+				seen = [];
+				button.addEventListener('keydown', e => seen.push(e.defaultPrevented));
+				tool = createSelectionTool();
+				tool.enable();
+			});
+			afterEach(() => tool.disable());
+
+			it.each([
+				['ArrowRight', {}],
+				['shift ArrowRight', { shiftKey: true }],
+			])('%s on a control the keyboard reached is left to it', (_, mods) => {
+				button.focus();
+				const e = arrow({ key: 'ArrowRight', code: 'ArrowRight', ...mods });
+				expect(e.defaultPrevented).toBe(false);
+				expect(seen).toEqual([false]);
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 10,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
+
+			it('an arrow on a control a pointer press focused reaches it cancelled and moves the rect', () => {
+				clickFocus(button);
+				arrow({ key: 'ArrowRight', code: 'ArrowRight' });
+				expect(seen).toEqual([true]);
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 11,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
+
+			it('Space on a control the keyboard reached is left to it', () => {
+				button.focus();
+				expect(arrow({ key: ' ', code: 'Space' }).defaultPrevented).toBe(false);
+			});
+
+			it('Space on a control a pointer press focused cannot press it', () => {
+				clickFocus(button);
+				expect(arrow({ key: ' ', code: 'Space' }).defaultPrevented).toBe(true);
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 10,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
+
+			it('Home and End on a slider the keyboard reached are left to it', () => {
+				const slider = document.createElement('input');
+				slider.type = 'range';
+				document.body.appendChild(slider);
+				slider.focus();
+				const kept = ['Home', 'End'].map(code => {
+					const e = new KeyboardEvent('keydown', {
+						key: code,
+						code,
+						bubbles: true,
+						cancelable: true,
+					});
+					slider.dispatchEvent(e);
+					return !e.defaultPrevented;
+				});
+				expect(kept).toEqual([true, true]);
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 10,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
+
+			it('Enter and the arrows on a clicked checkbox in a dialog are left to it', () => {
+				const box = document.createElement('input');
+				box.type = 'checkbox';
+				document.body.appendChild(box);
+				clickFocus(box);
+				State.modal = { isOpen: () => true };
+				const keys = ['Enter', 'ArrowRight', 'ArrowDown'].map(code => {
+					const e = new KeyboardEvent('keydown', {
+						key: code,
+						code,
+						bubbles: true,
+						cancelable: true,
+					});
+					box.dispatchEvent(e);
+					return e.defaultPrevented;
+				});
+				delete State.modal;
+				expect(keys).toEqual([false, false, false]);
+				expect(Toolbar.switchTool).not.toHaveBeenCalled();
+				expect(State.selectionCursor.getSelection()).toEqual({
+					x: 10,
+					y: 5,
+					width: 1,
+					height: 1,
+				});
+			});
 		});
 
 		describe('a fresh pick', () => {
@@ -1226,6 +1707,14 @@ describe('Keyboard Utilities', () => {
 				expect(State.textArtCanvas.startUndo).toHaveBeenCalledTimes(2);
 			});
 
+			it('ctrl shift v without the Clipboard API leaves the tool bare', () => {
+				const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+				expect(navigator.clipboard).toBeUndefined();
+				press({ code: 'KeyV', ctrlKey: true, shiftKey: true });
+				expect(State.selectionCursor.isVisible()).toBe(false);
+				expect(warn).not.toHaveBeenCalled();
+			});
+
 			it('ctrl v with an empty buffer leaves the tool bare', () => {
 				press({ code: 'KeyV', ctrlKey: true });
 				expect(State.selectionCursor.isVisible()).toBe(false);
@@ -1247,13 +1736,8 @@ describe('Keyboard Utilities', () => {
 			it('keys typed into a field or a dialog leave the tool bare', () => {
 				const input = document.createElement('input');
 				document.body.appendChild(input);
-				isTextEntry.mockImplementation(t => t === input);
-				try {
-					press({ code: 'KeyC', ctrlKey: true }, input);
-					press({ key: '[' }, input);
-				} finally {
-					isTextEntry.mockImplementation(() => false);
-				}
+				press({ code: 'KeyC', ctrlKey: true }, input);
+				press({ key: '[' }, input);
 				expect(State.selectionCursor.isVisible()).toBe(false);
 
 				State.modal = { isOpen: () => true };

@@ -539,6 +539,56 @@ describe('selection move mode', () => {
 			expect(Array.from(live.getImageData())).toEqual(before);
 		}));
 
+	// the block at (10,4)-(12,5) reads A F B over G G G
+	const seedFlipRow = live => {
+		live.startUndo();
+		live.draw(draw => {
+			draw(65, 7, 0, 10, 4);
+			draw(66, 7, 0, 12, 4);
+		});
+		live.endUndo();
+		return Array.from(live.getImageData());
+	};
+	const flipKey = k => ({ ...key(k === '[' ? 'BracketLeft' : 'BracketRight'), key: k });
+	const rows = (live, x0, y0 = 4) =>
+		[y0, y0 + 1].map(y =>
+			[0, 1, 2].map(dx => live.getBlock(x0 + dx, y).charCode));
+
+	it.each([
+		['[', [[66, 70, 65], [71, 71, 71]]],
+		[']', [[71, 71, 71], [65, 70, 66]]],
+	])('a %s flip mid-move rides the float and the move stays one undo step', (k, flipped) =>
+		withLiveCanvas((live, tool, peer) => {
+			const before = seedFlipRow(live);
+			tool.toggleMoveMode();
+			const kd = keydownHandlers[keydownHandlers.length - 1];
+			kd(key('ArrowRight'));
+			kd(flipKey(k));
+			kd(key('ArrowRight'));
+			tool.toggleMoveMode();
+			expect(rows(live, 12)).toEqual(flipped);
+			expect(Array.from(peer)).toEqual(Array.from(live.getImageData()));
+			live.undo();
+			expect(Array.from(live.getImageData())).toEqual(before);
+		}));
+
+	it('a flip before the first step moves flipped and stays one undo step', () =>
+		withLiveCanvas((live, tool, peer) => {
+			const before = seedFlipRow(live);
+			tool.toggleMoveMode();
+			const kd = keydownHandlers[keydownHandlers.length - 1];
+			kd(flipKey('['));
+			expect(rows(live, 10)).toEqual([[66, 70, 65], [71, 71, 71]]);
+			kd(key('ArrowDown'));
+			kd(key('ArrowDown'));
+			tool.toggleMoveMode();
+			expect(rows(live, 10, 6)).toEqual([[66, 70, 65], [71, 71, 71]]);
+			expect(rows(live, 10)).toEqual([[0, 0, 0], [0, 0, 0]]);
+			expect(Array.from(peer)).toEqual(Array.from(live.getImageData()));
+			live.undo();
+			expect(Array.from(live.getImageData())).toEqual(before);
+		}));
+
 	it('redo before the first step lands the block, so the move carries the redone cells', () =>
 		withLiveCanvas((live, tool, peer) => {
 			live.startUndo();

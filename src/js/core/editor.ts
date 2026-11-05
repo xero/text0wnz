@@ -314,7 +314,7 @@ export const createEditorCore = (
 
 	const ensureStroke = () => {
 		if (!strokeOpen) {
-			arena.beginStroke({ frame: currentFrame });
+			arena.beginStroke({ frame: currentFrame, ice: doc.getIceColors() });
 			strokeOpen = true;
 		}
 	};
@@ -510,11 +510,17 @@ export const createEditorCore = (
 		if (!resized && meta.frame !== currentFrame) {
 			switchFrame(meta.frame);
 		}
+		// words recorded under the other ice flag restore in its blink
+		// fold; re-express them like v2's flag semantics. Words recorded
+		// under this flag come back verbatim, or a loaded cell that holds
+		// a steady bright bg without ice would turn to blink
+		const ice = doc.getIceColors();
+		const refold = meta.ice !== ice;
 		for (const [frame, indexes] of touched) {
 			for (const index of indexes) {
-				// words recorded before an ice toggle restore in the old
-				// blink fold; re-express them like v2's flag semantics
-				refoldIndex(doc.frames[frame], index, doc.getIceColors());
+				if (refold) {
+					refoldIndex(doc.frames[frame], index, ice);
+				}
 				if (frame === currentFrame) {
 					emit(index, packWord(readCell(index)), true);
 				}
@@ -690,6 +696,8 @@ export const createEditorCore = (
 		getMirrorX: x => mirrorX(columns(), x),
 		setIceColors: ice => {
 			if (doc.getIceColors() !== ice) {
+				// a step's ice flag has to hold for every word it records
+				flushStroke();
 				doc.setIceColors(ice);
 				refoldPlanes(ice);
 			}
