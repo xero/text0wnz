@@ -90,15 +90,27 @@ byte-exact golden tests before anything else moved.
   launches accept `.zip`, `.lha`, and `.lzh` directly: one openable
   entry loads straight away, several raise a picker modal. Amiga
   archives open as latin-1 in Topaz+ 1200; zips keep CP437 defaults.
+- **Old packs open.** Zips shrunk or imploded by PKZIP 1.x, the bulk of
+  the 16colo.rs archive from 1990 to 1993, open alongside stored and
+  deflated ones.
+- **Damaged pieces open.** A zip or lha entry with bit rot opens as far
+  as it decodes, with a note saying how much survived or that it failed
+  its checksum. Only an entry that decodes to nothing is refused.
+- **Compression of our own.** Zip opens, `.dur` and `.0wnz` files, and
+  the autosave journal no longer depend on the browser's compression
+  streams: a built-in deflate takes over wherever they are missing or
+  misbehave.
 - **Input.** Pen pressure, touch gestures, focal zoom, and a two-finger
   tap for undo.
-- **Crash recovery.** An OPFS journal autosaves your session and
+- **Crash recovery.** A journal in the origin private file system
+  (IndexedDB where the browser refuses it) autosaves your session and
   restores it after a crash or reload.
 - **Font favorites.** Star fonts to pin them at the top of the picker.
 - **Server packaging.** Single-binary builds for eight platforms, a
   `--static` mode that serves the app and websockets from one process,
   a `/healthz` endpoint, a distroless Docker image, and
-  `ROOM_MAX_COLUMNS`/`ROOM_MAX_ROWS` knobs for admins.
+  `ROOM_MAX_COLUMNS`/`ROOM_MAX_ROWS`, `ROOM_MAX_GUESSES`, and
+  `TRUST_PROXY` knobs for admins.
 
 ### Changed
 
@@ -429,3 +441,8 @@ byte-exact golden tests before anything else moved.
   into the installed app.
 - **Local builds ship the license.** A local `bun bake` left
   `LICENSE.txt` out of `dist`, though the build log listed it.
+
+### Removed
+
+- **`SESSION_KEY`.** The Docker image no longer generates one; nothing
+  in the server ever read it.
