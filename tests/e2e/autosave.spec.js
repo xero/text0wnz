@@ -13,6 +13,7 @@ import {
 	tap,
 	writeText,
 } from './helpers/editorHelpers.js';
+import { durOf, openBuffer } from './helpers/archiveFixtures.js';
 
 /**
  * A digest of every plane of every frame, plus the size and iCE flag,
@@ -249,6 +250,19 @@ test.describe('Autosave across reloads', () => {
 
 		await reload(page);
 		expect(await digest(page, 'live')).toBe(saved);
+	});
+
+	test('an opened movie comes back with every frame', async ({ page }) => {
+		// the legacy u16 snapshot keeps one frame, so two coming back
+		// came from the journal
+		await openBuffer(page, 'movie.dur', durOf(['FRAME1'], ['FRAME2']));
+		await expect.poll(() => readRegion(page, 0, 0, 5, 0)).toEqual(['FRAME1']);
+		const live = await persisted(page, true);
+		expect(live).toMatch(/ frames=2 /);
+
+		await reload(page);
+		expect(await digest(page, 'live')).toBe(live);
+		expect(await readRegion(page, 0, 0, 5, 0)).toEqual(['FRAME1']);
 	});
 });
 
