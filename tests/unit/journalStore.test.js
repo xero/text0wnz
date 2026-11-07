@@ -462,6 +462,23 @@ describe('journal backend probe', () => {
 		}
 	});
 
+	it('gives up on an OPFS probe that never answers and journals through IndexedDB', async () => {
+		vi.useFakeTimers();
+		try {
+			const idb = fakeIndexedDB();
+			const workers = environment({ opfs: true, idb });
+			vi.stubGlobal('navigator', { storage: { getDirectory: () => new Promise(() => {}) } });
+			const store = createJournalStore();
+			const written = store.rewrite(Uint8Array.of(7));
+			await vi.advanceTimersByTimeAsync(3100);
+			await written;
+			expect(workers).toHaveLength(0);
+			expect(idb.records.map(r => [...r])).toEqual([[7]]);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	it('stays on OPFS when its calls fail after the probe, leaving an older IndexedDB journal unread', async () => {
 		const idb = fakeIndexedDB();
 		idb.records.push(await createJournal(doc()));

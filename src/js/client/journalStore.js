@@ -198,11 +198,35 @@ export const createMemoryBackend = () => {
 	};
 };
 
+// every journal call waits on the pick, so a probe that never answers
+// must give up like a dead worker does, not wedge the restore
+const OPFS_PROBE_MS = 3000;
+
+/** @returns {Promise<unknown>} */
+const probeOpfs = () =>
+	new Promise((resolve, reject) => {
+		const answer = navigator.storage.getDirectory();
+		const cancel = visibleTimeout(
+			() => reject(new Error('OPFS probe timed out')),
+			OPFS_PROBE_MS,
+		);
+		answer.then(
+			dir => {
+				cancel();
+				resolve(dir);
+			},
+			error => {
+				cancel();
+				reject(error);
+			},
+		);
+	});
+
 /** @returns {Promise<JournalBackend>} */
 const pickBackend = async () => {
 	try {
 		if (typeof Worker !== 'undefined') {
-			await navigator.storage.getDirectory();
+			await probeOpfs();
 			return createOpfsBackend();
 		}
 	} catch {
